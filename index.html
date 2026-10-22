@@ -364,7 +364,8 @@ let lastBackPress = 0;
 
 function setViewMode(mode) {
   viewMode = mode;
-  $('tabLog').classList.toggle('active', mode === 'log');$('tabSum').classList.toggle('active', mode === 'summary');
+  $('tabLog').classList.toggle('active', mode === 'log');
+  $('tabSum').classList.toggle('active', mode === 'summary');
   renderRecent();
 }
 
@@ -373,7 +374,8 @@ function initBackGuard() {
   try {
     history.pushState({ guard: 1 }, '', location.href);
     window.addEventListener('popstate', () => {
-      if (!$('suggest').hidden) {$('suggest').hidden = true;
+      if (!$('suggest').hidden) {
+        $('suggest').hidden = true;
         $('search').blur();
         history.pushState({ guard: 1 }, '', location.href);
         return;
@@ -484,10 +486,12 @@ function calc(unit, lMult, palletsRaw, looseRaw, noteRaw) {
 
 function updateCalc() {
   const btn = $('save');
-  $('palletField').classList.remove('bad');$('looseField').classList.remove('bad');
+  $('palletField').classList.remove('bad');
+  $('looseField').classList.remove('bad');
   if (!current) {
     btn.disabled = true; btn.classList.add('solo');
-    $('calcText').textContent = '';$('saveLabel').textContent = '자재를 선택하세요';
+    $('calcText').textContent = '';
+    $('saveLabel').textContent = '자재를 선택하세요';
     return null;
   }
   const c = calc(current.unit, current.looseMult || 1, $('pallets').value, $('loose').value, $('note').value);
@@ -495,17 +499,20 @@ function updateCalc() {
     if (c.badP) $('palletField').classList.add('bad');
     if (c.badL) $('looseField').classList.add('bad');
     btn.disabled = true; btn.classList.add('solo');
-    $('calcText').textContent = '';$('saveLabel').textContent = '숫자를 확인하세요';
+    $('calcText').textContent = '';
+    $('saveLabel').textContent = '숫자를 확인하세요';
     return null;
   }
   if (c.empty) {
     btn.disabled = true; btn.classList.add('solo');
-    $('calcText').textContent = '';$('saveLabel').textContent = '잔량 또는 파렛트를 입력하세요';
+    $('calcText').textContent = '';
+    $('saveLabel').textContent = '잔량 또는 파렛트를 입력하세요';
     return null;
   }
   btn.disabled = false;
   btn.classList.remove('solo');
-  $('calcText').textContent = c.screen + ' = ' + fmt(c.total);$('saveLabel').textContent = fmt(c.total) + '개 저장';
+  $('calcText').textContent = c.screen + ' = ' + fmt(c.total);
+  $('saveLabel').textContent = fmt(c.total) + '개 저장';
   return c;
 }
 
@@ -513,4 +520,415 @@ function updateCalc() {
 let scanner = null;
 let holding = false;
 let camLive = false;
-let last = { code
+let last = { code: '', t: 0 };
+
+function startScanner() {
+  $('camError').hidden = true;
+  if (!window.isSecureContext) return camFail('카메라는 https 주소에서만 켜집니다.');
+  if (typeof Html5Qrcode === 'undefined') return camFail('스캐너를 불러오지 못했습니다.');
+  setCam('카메라 연결 중', '');
+
+  if (!scanner) {
+    const F = Html5QrcodeSupportedFormats;
+    scanner = new Html5Qrcode('reader', {
+      verbose: false,
+      formatsToSupport: [F.CODE_128, F.CODE_39, F.CODE_93, F.EAN_13, F.EAN_8, F.ITF, F.UPC_A, F.QR_CODE, F.DATA_MATRIX],
+      experimentalFeatures: { useBarCodeDetectorIfSupported: true }
+    });
+  }
+  scanner.start({ facingMode: 'environment' }, { fps: 12, disableFlip: true }, onDecode, () => {})
+    .then(() => { camLive = true; setCam('스캔 중', 'live'); if (holding) hold(); })
+    .catch(() => camFail('카메라 권한을 허용한 뒤 다시 시도해주세요.'));
+}
+
+function camFail(msg) {
+  camLive = false;
+  setCam('카메라 꺼짐', 'off');
+  $('camErrorText').textContent = msg;
+  $('camError').hidden = false;
+}
+
+function setCam(text, state) {
+  $('camText').textContent = text;
+  $('camState').className = 'cam-state' + (state ? ' ' + state : '');
+}
+
+function onDecode(text) {
+  const code = String(text).trim();
+  const now = Date.now();
+  if (code === last.code && now - last.t < DEDUPE_MS) { last.t = now; return; }
+  last = { code, t: now };
+  if (holding || !code) return;
+
+  const item = matchItem(code);
+  if (item) pick(item, 'scan');
+  else rejectScan(code);
+}
+
+function matchItem(raw) {
+  return items.find((m) => m.code === raw) ||
+         itemsByLen.find((m) => m.code.length >= 4 && raw.indexOf(m.code) > -1) || null;
+}
+
+let rejectTimer = null;
+function rejectScan(code) {
+  beep(true);
+  current = null;
+  $('item').className = 'item reject';
+  const ex = excluded.find((m) => m.code === code) ||
+             excluded.slice().sort((a, b) => b.code.length - a.code.length).find((m) => m.code.length >= 4 && code.indexOf(m.code) > -1);
+  const shown = code.length > 40 ? code.slice(0, 40) + '…' : code;
+  $('itemCode').textContent = ex ? ex.code + ' · ' + ex.reason + (ex.row ? ' (' + ex.row + '행)' : '') : shown + ' · 단량 탭에 없는 품번';
+  $('itemUnit').hidden = true;
+  $('itemLooseUnit').hidden = true;
+  $('itemName').textContent = NOT_MANAGED;
+  setInputsEnabled(false);
+  updateCalc();
+  $('cam').classList.add('reject');
+  clearTimeout(rejectTimer);
+  rejectTimer = setTimeout(() => $('cam').classList.remove('reject'), 900);
+}
+
+function hold() {
+  holding = true;
+  $('app').classList.add('picking');
+  try { if (scanner && scanner.getState() === Html5QrcodeScannerState.SCANNING) scanner.pause(true); } catch (e) {}
+  $('cam').classList.add('caught');
+  $('camHold').hidden = false;
+}
+
+function release() {
+  holding = false;
+  $('app').classList.remove('picking');
+  last.t = Date.now();
+  try { if (scanner && scanner.getState() === Html5QrcodeScannerState.PAUSED) scanner.resume(); } catch (e) {}
+  $('cam').classList.remove('caught');
+  $('camHold').hidden = true;
+  if (camLive) setCam('스캔 중', 'live');
+}
+
+/* ════════ 자재 선택 · 저장 ════════ */
+function setInputsEnabled(on) {
+  ['loose', 'pallets', 'note'].forEach((id) => { $(id).disabled = !on; if (!on) $(id).value = ''; });
+}
+
+function pick(item, source) {
+  current = item;
+  const lMult = item.looseMult || 1;
+  $('item').className = 'item';
+  $('itemCode').textContent = item.code + (item.vendor ? ' · ' + item.vendor : '');
+  $('itemUnit').textContent = '1파렛트=' + fmt(item.unit);
+  $('itemUnit').hidden = false;
+
+  if (lMult > 1) {
+    $('itemLooseUnit').textContent = '잔량 1묶음=' + lMult + '롤';
+    $('itemLooseUnit').hidden = false;
+    $('looseLabel').textContent = '잔량 묶음 (×' + lMult + '배수)';
+    $('looseLabel').className = 'highlight';
+  } else {
+    $('itemLooseUnit').hidden = true;
+    $('looseLabel').textContent = '잔량 (낱개)';
+    $('looseLabel').className = '';
+  }
+
+  $('itemName').textContent = item.name || '(품명 없음)';
+  setInputsEnabled(true);
+  updateCalc();
+  if (source === 'scan') beep();
+  hold();
+  setTimeout(() => $('loose').focus({ preventScroll: true }), 50);
+}
+
+function setIdle() {
+  current = null;
+  $('item').className = 'item idle';
+  $('itemCode').textContent = '관리 자재 ' + items.length + '개';
+  $('itemUnit').hidden = true;
+  $('itemLooseUnit').hidden = true;
+  $('looseLabel').textContent = '잔량 (낱개)';
+  $('looseLabel').className = '';
+  $('itemName').textContent = '바코드를 비추거나 검색하세요';
+  setInputsEnabled(false);
+  updateCalc();
+}
+
+function cancelPick() {
+  document.activeElement && document.activeElement.blur();
+  setIdle();
+  release();
+}
+
+function save() {
+  if (!current) return toast('자재를 먼저 스캔하거나 검색해주세요.');
+  const c = updateCalc();
+  if (!c) {
+    const e = calc(current.unit, current.looseMult || 1, $('pallets').value, $('loose').value, $('note').value);
+    return toast(e.error || '잔량이나 파렛트 수를 입력해주세요.');
+  }
+  const now = new Date();
+  const pad = (n) => String(n).padStart(2, '0');
+  const timeStr = pad(now.getHours()) + ':' + pad(now.getMinutes()) + ':' + pad(now.getSeconds());
+
+  const req = {
+    reqId: Date.now().toString(36) + Math.random().toString(36).slice(2, 8),
+    code: current.code,
+    name: current.name,
+    vendor: current.vendor || '',
+    pallets: c.pallets === null ? '' : c.pallets,
+    loose: c.loose === null ? '' : c.loose,
+    note: c.note || '',
+    qty: c.total,
+    formula: c.screen,
+    time: timeStr,
+    ts: now.getTime(),
+    state: 'pending'
+  };
+  recent.unshift(req);
+  document.activeElement && document.activeElement.blur();
+  setIdle();
+  release();
+  send(req);
+}
+
+async function send(req) {
+  req.state = 'pending';
+  renderRecent(); renderMeta();
+  try {
+    const data = await api.save(req);
+    const rec = Object.assign({ state: 'done' }, data.record);
+    const idx = recent.indexOf(req);
+    if (idx > -1) recent[idx] = rec;
+    else recent.unshift(rec);
+  } catch (e) {
+    req.state = 'failed';
+    req.error = e.message;
+    toast('저장 실패: 해당 줄을 누르면 다시 보냅니다.');
+  }
+  renderRecent(); renderMeta();
+}
+
+/* ════════ 검색 ════════ */
+const norm = (s) => String(s || '').toLowerCase().replace(/\s+/g, '');
+
+function runSearch(q) {
+  const k = norm(q);
+  if (!k) return items.slice();
+  const starts = [], ends = [], inCode = [], inName = [], inVendor = [];
+  items.forEach((m) => {
+    if (m.code.toLowerCase().startsWith(k)) starts.push(m);
+    else if (m.code.toLowerCase().endsWith(k)) ends.push(m);
+    else if (m.code.toLowerCase().indexOf(k) > -1) inCode.push(m);
+    else if (norm(m.name).indexOf(k) > -1) inName.push(m);
+    else if (norm(m.vendor).indexOf(k) > -1) inVendor.push(m);
+  });
+  return starts.concat(ends, inCode, inName, inVendor);
+}
+
+function excludedMatches(q) {
+  const k = norm(q);
+  if (k.length < 2) return [];
+  return excluded.filter((m) => m.code.indexOf(k) > -1 || norm(m.name).indexOf(k) > -1 || norm(m.vendor).indexOf(k) > -1).slice(0, 5);
+}
+
+function hl(text, q) {
+  const k = String(q || '').trim();
+  const t = String(text || '');
+  const i = k ? t.toLowerCase().indexOf(k.toLowerCase()) : -1;
+  if (i < 0) return esc(t);
+  return esc(t.slice(0, i)) + '<mark>' + esc(t.slice(i, i + k.length)) + '</mark>' + esc(t.slice(i + k.length));
+}
+
+function renderSuggest() {
+  const box = $('suggest');
+  const q = $('search').value.trim();
+  const all = runSearch(q);
+  const LIMIT = 80;
+  suggestions = all.slice(0, LIMIT);
+  activeSuggest = q && suggestions.length ? 0 : -1;
+  const ex = excludedMatches(q);
+
+  let html = '';
+  if (!items.length) {
+    html = '<li class="empty">관리 자재 목록을 불러오지 못했습니다</li>';
+  } else if (!suggestions.length && !ex.length) {
+    html = '<li class="empty">일치하는 관리 자재가 없습니다</li>';
+  } else {
+    html = suggestions.map((m, i) => {
+      const multBadge = m.looseMult > 1 ? ' · 잔량×' + m.looseMult : '';
+      return '<li><button type="button" data-i="' + i + '"' + (i === activeSuggest ? ' class="on"' : '') + '>' +
+        '<span class="s-code">[' + hl(m.code, q) + ']</span>' +
+        '<span class="s-name">' + hl(m.name, q) + (m.vendor ? ' <span class="s-vendor">· ' + hl(m.vendor, q) + '</span>' : '') + '</span>' +
+        '<span class="s-unit">(단량:' + fmt(m.unit) + multBadge + ')</span>' +
+      '</button></li>';
+    }).join('');
+  }
+  html += ex.map((m) =>
+    '<li class="excl"><b>[' + hl(m.code, q) + ']</b> ' + esc(m.name) +
+    '<small>관리 대상 아님 · ' + esc(m.reason) + '</small></li>').join('');
+
+  box.innerHTML = html;
+  box.hidden = false;
+  box.scrollTop = 0;
+}
+
+function chooseSuggest(i) {
+  const m = suggestions[i];
+  if (!m) return;
+  $('search').value = '';
+  $('suggest').hidden = true;
+  $('search').blur();
+  pick(m, 'search');
+}
+
+/* ════════ 렌더링: 1) 시간순 스캔이력 vs 2) 품목별 통합합계 ════════ */
+function renderRecent() {
+  const list = $('list');
+  if (!recent.length) {
+    list.innerHTML = '<li class="empty">아직 입력한 내역이 없습니다</li>';
+    return;
+  }
+
+  if (viewMode === 'log') {
+    list.innerHTML = recent.map((r, i) => {
+      const vPart = r.vendor ? ' · ' + esc(r.vendor) : '';
+      const fPart = r.formula ? ' · ' + esc(String(r.formula).replace(/\*/g, '×')) : '';
+      let sub = esc(r.code) + vPart + fPart;
+      if (r.state === 'pending') sub += ' · 저장 중...';
+      else if (r.state === 'failed') sub = '저장 실패 · 눌러서 다시 보내기';
+
+      const noteHtml = r.note ? '<p class="row-note">📌 ' + esc(r.note) + '</p>' : '';
+      return '<li class="row ' + (r.state || 'done') + '" data-i="' + i + '">' +
+               '<span class="row-time">' + esc(r.time || '--:--') + '</span>' +
+               '<div class="row-main"><p class="row-name">' + esc(r.name || r.code) + '</p><p class="row-sub">' + sub + '</p>' + noteHtml + '</div>' +
+               '<div class="row-qty"><b>' + fmt(r.qty) + '</b></div>' +
+             '</li>';
+    }).join('');
+    return;
+  }
+
+  const groups = {};
+  const order = [];
+  recent.slice().reverse().forEach((r) => {
+    if (r.state === 'failed') return;
+    if (!groups[r.code]) {
+      order.unshift(r.code);
+      groups[r.code] = { code: r.code, name: r.name, vendor: r.vendor, total: 0, count: 0, logs: [], notes: [] };
+    }
+    const g = groups[r.code];
+    g.total = round(g.total + (Number(r.qty) || 0));
+    g.count += 1;
+    g.logs.push((r.time ? r.time.slice(0, 5) + ' ' : '') + '[' + fmt(r.qty) + ']');
+    if (r.note) g.notes.push(r.note);
+  });
+
+  list.innerHTML = order.map((code) => {
+    const g = groups[code];
+    const vPart = g.vendor ? ' · ' + esc(g.vendor) : '';
+    const sub = esc(g.code) + vPart + ' · ' + esc(g.logs.join(' + '));
+    const noteHtml = g.notes.length ? '<p class="row-note">📌 ' + esc(g.notes.join(' / ')) + '</p>' : '';
+    return '<li class="row done">' +
+             '<div class="row-main"><p class="row-name">' + esc(g.name || g.code) + '</p><p class="row-sub">' + sub + '</p>' + noteHtml + '</div>' +
+             '<div class="row-qty"><b>총 ' + fmt(g.total) + '</b><span>' + g.count + '회 스캔</span></div>' +
+           '</li>';
+  }).join('');
+}
+
+function renderMeta() {
+  const pending = recent.filter((r) => r.state === 'pending').length;
+  const failed = recent.filter((r) => r.state === 'failed').length;
+  const meta = $('recentMeta');
+  if (failed) meta.textContent = '실패 ' + failed + '건';
+  else if (pending) meta.textContent = '전송 중 ' + pending + '건';
+  else meta.textContent = '총 ' + recent.length + '건 기록됨';
+}
+
+function fmt(n) { return Number(n || 0).toLocaleString('ko-KR', { maximumFractionDigits: 4 }); }
+function esc(s) { return String(s || '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+
+let toastTimer = null;
+function toast(msg) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.hidden = true; }, 3000);
+}
+
+/* ════════ 소리 · 진동 ════════ */
+let actx = null;
+function beep(low) {
+  try {
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+    if (actx.state === 'suspended') actx.resume();
+    const o = actx.createOscillator(), g = actx.createGain(), t = actx.currentTime;
+    o.frequency.value = low ? 420 : 1400;
+    g.gain.setValueAtTime(0.12, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + (low ? 0.22 : 0.09));
+    o.connect(g); g.connect(actx.destination);
+    o.start(t); o.stop(t + (low ? 0.23 : 0.1));
+  } catch (e) {}
+  if (navigator.vibrate) navigator.vibrate(low ? [80, 60, 80] : 60);
+}
+document.addEventListener('pointerdown', () => {
+  try { actx = actx || new (window.AudioContext || window.webkitAudioContext)(); actx.resume(); } catch (e) {}
+}, { once: true });
+
+/* ════════ 이벤트 ════════ */
+$('loose').addEventListener('input', updateCalc);
+$('pallets').addEventListener('input', updateCalc);
+$('note').addEventListener('input', updateCalc);
+
+$('loose').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') { e.preventDefault(); $('pallets').focus(); }
+  if (e.key === 'Escape') cancelPick();
+});
+$('pallets').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') { e.preventDefault(); save(); }
+  if (e.key === 'Escape') cancelPick();
+});
+$('note').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') { e.preventDefault(); save(); }
+  if (e.key === 'Escape') cancelPick();
+});
+
+$('save').addEventListener('click', save);
+$('camHold').addEventListener('click', cancelPick);
+$('camRetry').addEventListener('click', startScanner);
+
+$('search').addEventListener('focus', renderSuggest);
+$('search').addEventListener('input', renderSuggest);
+$('search').addEventListener('keydown', (e) => {
+  const box = $('suggest');
+  if (e.key === 'Enter' && suggestions.length) {
+    e.preventDefault();
+    chooseSuggest(activeSuggest > -1 ? activeSuggest : 0);
+  } else if (e.key === 'Escape') {
+    box.hidden = true;
+    $('search').blur();
+  }
+});
+$('suggest').addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-i]');
+  if (b) chooseSuggest(+b.dataset.i);
+});
+document.addEventListener('pointerdown', (e) => {
+  if (!e.target.closest('.search')) $('suggest').hidden = true;
+});
+
+$('list').addEventListener('click', (e) => {
+  const row = e.target.closest('.row.failed');
+  if (!row) return;
+  const r = recent[+row.dataset.i];
+  if (r) send(r);
+});
+
+/* ════════ 시작 ════════ */
+initBackGuard();
+setIdle();
+renderRecent();
+renderMeta();
+boot();
+startScanner();
+</script>
+</body>
+</html>
