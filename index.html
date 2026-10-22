@@ -1,35 +1,64 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="ko" data-theme="pro">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-  <meta name="theme-color" content="#ffffff">
-  <title>자재 재고실사</title>
+  <meta name="theme-color" content="#0f172a">
+  <title>자재 재고실사 스캐너</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/galmuri@latest/dist/galmuri.css">
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <style>
-    :root {
-      --ink: #191f28;
-      --sub: #6b7684;
-      --faint: #b0b8c1;
-      --fill: #f2f4f6;
-      --line: #e5e8eb;
-      --bg: #ffffff;
+    /* ════════ 1. 모던 프로(Pro) 테마 & 2. Aseprite 도트(Pixel) 테마 변수 ════════ */
+    :root[data-theme="pro"] {
+      --bg: #f1f5f9;
+      --header-bg: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      --card: #ffffff;
+      --card-border: #e2e8f0;
+      --card-shadow: 0 4px 16px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
+      --ink: #0f172a;
+      --sub: #64748b;
+      --faint: #94a3b8;
+      --fill: #f8fafc;
+      --field-border: #cbd5e1;
       --accent: #2563eb;
-      --green: #10b981;
-      --danger: #e5383b;
-      color-scheme: light;
+      --accent-soft: #dbeafe;
+      --emerald: #10b981;
+      --amber: #f59e0b;
+      --danger: #ef4444;
+      --radius-lg: 18px;
+      --radius-md: 12px;
+      --btn-shadow: 0 4px 0 #1e3a8a;
+      --font-main: "Pretendard Variable", Pretendard, -apple-system, sans-serif;
     }
+
+    :root[data-theme="pixel"] {
+      --bg: #2b2d42;
+      --header-bg: #1a1b26;
+      --card: #f4f1de;
+      --card-border: #1a1b26;
+      --card-shadow: 4px 4px 0px #1a1b26;
+      --ink: #1a1b26;
+      --sub: #4a4e69;
+      --faint: #8d99ae;
+      --fill: #ffffff;
+      --field-border: #1a1b26;
+      --accent: #e07a5f;
+      --accent-soft: #f2cc8f;
+      --emerald: #3d8b7d;
+      --amber: #f4a261;
+      --danger: #e63946;
+      --radius-lg: 4px;
+      --radius-md: 4px;
+      --btn-shadow: 0 4px 0 #1a1b26;
+      --font-main: "Galmuri11", "Pretendard Variable", sans-serif;
+    }
+
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
     [hidden] { display: none !important; }
+    svg.px { shape-rendering: crispEdges; flex-shrink: 0; }
 
-    html, body { height: 100%; background: var(--bg); overflow-x: hidden; }
-    body {
-      font-family: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, "Malgun Gothic", sans-serif;
-      color: var(--ink);
-      -webkit-font-smoothing: antialiased;
-      letter-spacing: -0.01em;
-    }
+    html, body { height: 100%; background: var(--bg); color: var(--ink); font-family: var(--font-main); overflow-x: hidden; }
     button, input { font: inherit; color: inherit; }
     button { cursor: pointer; border: 0; background: none; }
 
@@ -37,332 +66,416 @@
       min-height: 100%;
       display: flex;
       flex-direction: column;
-      padding-top: env(safe-area-inset-top, 0px);
-      max-width: 520px;
+      max-width: 500px;
       margin: 0 auto;
+      padding-bottom: 24px;
     }
 
-    /* ── 상단 바 (작업자 & GPS 상태 & 시트 새로고침) ── */
-    .topbar {
-      display: flex; justify-content: space-between; align-items: center;
-      padding: 8px 16px 2px; font-size: 12px; font-weight: 600; color: var(--sub);
+    /* ── 상단 콘솔 헤더 ── */
+    .console-header {
+      background: var(--header-bg);
+      color: #fff;
+      padding: calc(10px + env(safe-area-inset-top, 0px)) 16px 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 2px solid var(--card-border);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.12);
     }
-    .top-chips { display: flex; gap: 6px; align-items: center; }
-    .chip-btn {
-      padding: 4px 10px; border-radius: 999px; background: var(--fill);
-      font-size: 12px; font-weight: 700; color: var(--ink);
+    .brand { display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 15px; letter-spacing: -0.02em; }
+    .header-actions { display: flex; gap: 6px; align-items: center; }
+    .h-btn {
+      display: flex; align-items: center; gap: 5px;
+      padding: 6px 10px;
+      border-radius: var(--radius-md);
+      background: rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #fff; font-size: 12px; font-weight: 700;
+      transition: transform 0.08s, background 0.15s;
     }
-    .gps-pill {
-      padding: 4px 8px; border-radius: 999px; background: #ecfdf5; color: #059669;
-      font-size: 11px; font-weight: 700;
-    }
-    .gps-pill.off { background: var(--fill); color: var(--faint); }
+    .h-btn:active { transform: translateY(2px); background: rgba(255, 255, 255, 0.22); }
+    .h-btn.worker-active { background: #2563eb; border-color: #60a5fa; }
 
-    /* ── 카메라 (배터리 절약형) ── */
-    .cam {
-      position: relative;
-      flex: 0 0 auto;
-      height: clamp(135px, 22dvh, 210px);
-      margin: 6px 16px 0;
-      border-radius: 20px;
+    /* ── 카메라 뷰파인더 & 레이저 애니메이션 ── */
+    .cam-card {
+      margin: 12px 14px 0;
+      border-radius: var(--radius-lg);
+      border: 2px solid var(--card-border);
+      box-shadow: var(--card-shadow);
       overflow: hidden;
-      background: #0f172a;
-      isolation: isolate;
+      background: #090d16;
+      position: relative;
+      height: clamp(145px, 23dvh, 210px);
       transition: height 0.2s ease;
     }
-    .app.picking .cam { height: 42px !important; border-radius: 12px; }
-    .app.picking .guide, .app.picking #reader { opacity: 0; pointer-events: none; }
-    .app.picking .search { display: none; }
+    /* 키패드 올라올 때 상단 카메라를 42px 슬림 바로 축소 */
+    .app.picking .cam-card { height: 42px !important; }
+    .app.picking .hud-frame, .app.picking #reader { opacity: 0; pointer-events: none; }
+    .app.picking .search-wrap { display: none; }
 
     #reader { position: absolute; inset: 0; }
     #reader video { display: block; width: 100% !important; height: 100% !important; object-fit: cover; }
     #reader > div, #reader canvas { display: none !important; }
 
-    .guide {
+    /* 스캐너 코너 브래킷 & 레이저 빔 */
+    .hud-frame {
       position: absolute; z-index: 2;
-      left: 12%; right: 12%; top: 26%; bottom: 26%;
-      border: 1.5px solid rgba(255, 255, 255, 0.7);
-      border-radius: 14px; pointer-events: none;
+      left: 13%; right: 13%; top: 22%; bottom: 24%;
+      pointer-events: none;
     }
-    .cam.reject .guide { border-color: var(--danger); border-width: 2.5px; }
-
-    .cam-state {
-      position: absolute; z-index: 3; left: 14px; bottom: 10px;
-      display: flex; align-items: center; gap: 7px;
-      font-size: 12px; font-weight: 600; color: rgba(255, 255, 255, 0.92);
+    .hud-corner {
+      position: absolute; width: 18px; height: 18px;
+      border-color: #38bdf8; border-style: solid; border-width: 0;
     }
-    .cam-state .dot { width: 6px; height: 6px; border-radius: 50%; background: #4ade80; }
+    .hud-corner.tl { top: 0; left: 0; border-top-width: 3px; border-left-width: 3px; border-top-left-radius: 6px; }
+    .hud-corner.tr { top: 0; right: 0; border-top-width: 3px; border-right-width: 3px; border-top-right-radius: 6px; }
+    .hud-corner.bl { bottom: 0; left: 0; border-bottom-width: 3px; border-left-width: 3px; border-bottom-left-radius: 6px; }
+    .hud-corner.br { bottom: 0; right: 0; border-bottom-width: 3px; border-right-width: 3px; border-bottom-right-radius: 6px; }
 
-    .cam-hold, .cam-sleep {
-      position: absolute; z-index: 4; inset: 0;
+    .laser-beam {
+      position: absolute; left: 4%; right: 4%; height: 2px;
+      background: linear-gradient(90deg, transparent, #ef4444, #fca5a5, #ef4444, transparent);
+      box-shadow: 0 0 10px 2px rgba(239, 68, 68, 0.85);
+      animation: scanLaser 2s ease-in-out infinite;
+    }
+    @keyframes scanLaser {
+      0%, 100% { top: 12%; opacity: 0.7; }
+      50% { top: 88%; opacity: 1; }
+    }
+
+    .cam-status {
+      position: absolute; z-index: 3; left: 12px; bottom: 8px;
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 4px 10px; border-radius: 999px;
+      background: rgba(9, 13, 22, 0.75); backdrop-filter: blur(4px);
+      font-size: 11px; font-weight: 700; color: #e2e8f0;
+    }
+    .led { width: 7px; height: 7px; border-radius: 50%; background: #10b981; box-shadow: 0 0 6px #10b981; }
+
+    .cam-overlay-btn {
+      position: absolute; z-index: 4; inset: 0; width: 100%;
       display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
-      background: rgba(15, 23, 42, 0.92);
-      color: #fff; font-size: 13px; font-weight: 700; width: 100%;
+      background: rgba(15, 23, 42, 0.92); color: #fff;
+      font-size: 13px; font-weight: 700;
     }
-    .cam-sleep small { font-size: 11px; font-weight: 500; color: #94a3b8; }
+    .cam-overlay-btn small { font-size: 11px; color: #94a3b8; font-weight: 500; }
 
-    /* ── 입력 영역 ── */
-    .entry { flex: 0 0 auto; display: flex; flex-direction: column; gap: 9px; padding: 10px 18px 0; }
-
-    .search { position: relative; }
-    .search input {
-      width: 100%; height: 42px;
-      padding: 0 16px 0 38px;
-      border: 0; border-radius: 12px;
-      background: var(--fill) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%238b95a1' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='7' cy='7' r='5'/%3E%3Cpath d='m15 15-3.5-3.5'/%3E%3C/svg%3E") no-repeat 13px 50%;
-      font-size: 15px; outline: none;
+    /* ── 메인 작업 패널 카드 ── */
+    .work-card {
+      margin: 10px 14px 0;
+      padding: 14px;
+      background: var(--card);
+      border: 2px solid var(--card-border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--card-shadow);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
     }
-    .search input::placeholder { color: var(--faint); }
+
+    /* 검색창 */
+    .search-wrap { position: relative; }
+    .search-box {
+      display: flex; align-items: center; gap: 8px;
+      height: 44px; padding: 0 12px;
+      background: var(--fill);
+      border: 2px solid var(--field-border);
+      border-radius: var(--radius-md);
+      transition: border-color 0.15s;
+    }
+    .search-box:focus-within { border-color: var(--accent); background: #fff; }
+    .search-box input {
+      flex: 1; border: 0; background: transparent; outline: none;
+      font-size: 14px; font-weight: 600;
+    }
+    .search-box input::placeholder { color: var(--faint); font-weight: 500; }
 
     .suggest {
-      position: absolute; z-index: 30; left: 0; right: 0; top: calc(100% + 5px);
-      max-height: min(260px, 42vh); overflow-y: auto;
-      list-style: none; background: var(--bg);
-      border: 1px solid var(--line); border-radius: 14px;
-      box-shadow: 0 12px 32px rgba(25, 31, 40, 0.16);
+      position: absolute; z-index: 40; left: 0; right: 0; top: calc(100% + 6px);
+      max-height: 260px; overflow-y: auto;
+      list-style: none; background: var(--card);
+      border: 2px solid var(--ink); border-radius: var(--radius-md);
+      box-shadow: 0 14px 30px rgba(0, 0, 0, 0.22);
     }
     .suggest button {
-      display: flex; width: 100%; align-items: baseline; gap: 6px;
-      padding: 11px 14px; text-align: left; font-size: 14px;
+      display: flex; width: 100%; align-items: center; gap: 8px;
+      padding: 11px 12px; text-align: left; font-size: 13px;
+      border-bottom: 1px solid var(--card-border);
     }
-    .suggest li + li button { border-top: 1px solid var(--fill); }
-    .suggest .s-code { font-size: 12px; color: var(--sub); }
-    .suggest .s-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
-    .suggest .s-vendor { font-size: 12px; color: var(--sub); }
-    .suggest .s-unit { font-size: 12px; color: var(--sub); }
-    .suggest mark { background: none; color: var(--accent); font-weight: 700; }
+    .suggest button:active { background: var(--accent-soft); }
+    .s-code { font-size: 12px; font-weight: 800; color: var(--accent); font-variant-numeric: tabular-nums; }
+    .s-name { flex: 1; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .s-unit { font-size: 11px; font-weight: 700; padding: 2px 6px; border-radius: 6px; background: var(--fill); color: var(--sub); }
 
-    /* 선택 자재 정보 */
-    .item { min-height: 40px; }
-    .item-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-    .item-code { font-size: 12px; font-weight: 600; color: var(--sub); }
+    /* 자재 정보 디스플레이 모니터 */
+    .item-monitor {
+      padding: 11px 13px;
+      border-radius: var(--radius-md);
+      background: var(--fill);
+      border: 2px solid var(--field-border);
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .item-monitor.active {
+      border-color: var(--accent);
+      background: linear-gradient(180deg, rgba(37, 99, 235, 0.06) 0%, rgba(37, 99, 235, 0.01) 100%);
+    }
+    .item-monitor.reject { border-color: var(--danger); background: #fef2f2; }
+    .item-top { display: flex; justify-content: space-between; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .item-code { font-size: 12px; font-weight: 800; color: var(--sub); font-variant-numeric: tabular-nums; }
     .badges { display: flex; gap: 5px; }
-    .unit { padding: 3px 8px; border-radius: 7px; background: var(--fill); font-size: 11px; font-weight: 700; }
-    .unit.mult { background: #dbeafe; color: var(--accent); }
-    .item-name { margin-top: 2px; font-size: 18px; font-weight: 700; line-height: 1.25; word-break: keep-all; }
-    .item.idle .item-name { color: var(--faint); }
-    .item.reject .item-name { color: var(--danger); font-size: 15px; }
+    .badge-pill {
+      padding: 3px 8px; border-radius: 6px;
+      font-size: 11px; font-weight: 800;
+      background: #e2e8f0; color: #1e293b;
+      border: 1px solid rgba(0,0,0,0.1);
+    }
+    .badge-pill.mult { background: #fef3c7; color: #b45309; border-color: #f59e0b; }
+    .item-name { font-size: 18px; font-weight: 800; line-height: 1.25; word-break: keep-all; }
+    .item-monitor.idle .item-name { color: var(--faint); font-size: 15px; font-weight: 600; }
 
-    /* 창고 구역 빠른 선택 칩 (3D 맵 연동) */
-    .zone-bar {
-      display: flex; gap: 5px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none;
+    /* ── 왼쪽: 잔량 / 오른쪽: 파렛트 입체 입력 슬롯 ── */
+    .counts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .slot {
+      display: flex; flex-direction: column; gap: 4px;
+      padding: 9px 12px;
+      border-radius: var(--radius-md);
+      background: var(--fill);
+      border: 2px solid var(--field-border);
+      cursor: text;
+      transition: all 0.15s;
     }
-    .zone-bar::-webkit-scrollbar { display: none; }
-    .zone-chip {
-      flex: 0 0 auto; padding: 5px 11px; border-radius: 8px;
-      background: var(--fill); color: var(--sub); font-size: 12px; font-weight: 700;
+    .slot:focus-within {
+      border-color: var(--accent);
+      background: #ffffff;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.12);
     }
-    .zone-chip.active { background: var(--accent); color: #fff; }
+    .slot-head { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 800; color: var(--sub); }
+    .slot-head.mult-on { color: #d97706; }
+    .slot input {
+      width: 100%; height: 32px; border: 0; background: transparent; outline: none;
+      font-size: 24px; font-weight: 900; font-variant-numeric: tabular-nums; color: var(--ink);
+    }
+    .slot input::placeholder { color: var(--faint); font-weight: 600; }
 
-    /* 수량 입력 (왼쪽: 잔량 / 오른쪽: 파렛트) */
-    .counts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-    .field {
-      display: flex; flex-direction: column; gap: 2px;
-      padding: 7px 12px 6px; border-radius: 12px; background: var(--fill);
+    /* 특이사항 메모 */
+    .note-slot {
+      display: flex; align-items: center; gap: 8px;
+      height: 40px; padding: 0 12px;
+      border-radius: var(--radius-md);
+      background: var(--fill);
+      border: 2px solid var(--field-border);
     }
-    .field:focus-within { box-shadow: inset 0 0 0 1.8px var(--ink); background: var(--bg); }
-    .field span { font-size: 11px; font-weight: 600; color: var(--sub); }
-    .field span.highlight { color: var(--accent); font-weight: 700; }
-    .field input {
-      width: 100%; height: 28px; border: 0; background: transparent; outline: none;
-      font-size: 21px; font-weight: 700; font-variant-numeric: tabular-nums;
-    }
+    .note-slot:focus-within { border-color: var(--accent); background: #fff; }
+    .note-slot input { flex: 1; border: 0; background: transparent; outline: none; font-size: 13px; font-weight: 600; }
+    .note-slot input::placeholder { color: var(--faint); font-weight: 500; }
 
-    .note-box input {
-      width: 100%; height: 38px; padding: 0 12px;
-      border: 0; border-radius: 10px; background: var(--fill); font-size: 13px; outline: none;
+    /* 입체 택타일(Tactile) 저장 버튼 */
+    .save-btn {
+      width: 100%; height: 52px; padding: 0 18px;
+      border-radius: var(--radius-md);
+      background: var(--accent); color: #ffffff;
+      border: 2px solid #1e3a8a;
+      box-shadow: var(--btn-shadow);
+      display: flex; align-items: center; justify-content: space-between;
+      font-size: 16px; font-weight: 800;
+      transition: transform 0.06s, box-shadow 0.06s, background 0.15s;
     }
+    .save-btn:active:not(:disabled) {
+      transform: translateY(3px);
+      box-shadow: 0 1px 0 #1e3a8a;
+    }
+    .save-btn.solo { justify-content: center; }
+    .save-btn:disabled {
+      background: #e2e8f0; color: #94a3b8;
+      border-color: #cbd5e1; box-shadow: none;
+    }
+    .save-calc { font-size: 13px; font-weight: 700; color: rgba(255,255,255,0.88); }
 
-    .save {
-      display: flex; align-items: center; justify-content: space-between; gap: 10px;
-      width: 100%; height: 48px; padding: 0 18px;
-      border-radius: 13px; background: var(--ink); color: #fff;
-      font-size: 15px; font-weight: 700;
+    /* ── 하단 시트 이력 카드 ── */
+    .log-card {
+      margin: 12px 14px 0;
+      background: var(--card);
+      border: 2px solid var(--card-border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--card-shadow);
+      overflow: hidden;
     }
-    .save .calc { font-size: 13px; font-weight: 500; color: rgba(255,255,255,0.75); }
-    .save.solo { justify-content: center; }
-    .save:disabled { background: var(--fill); color: var(--faint); }
-
-    /* ── 하단: 1) 시간순 이력 / 2) 통합합계 / 3) 3D 창고맵 ── */
-    .recent {
-      flex: 1 1 auto; display: flex; flex-direction: column;
-      margin-top: 12px; border-top: 7px solid var(--fill);
-    }
-    .recent-head {
+    .log-header {
       display: flex; justify-content: space-between; align-items: center;
-      padding: 9px 16px 4px;
+      padding: 10px 14px;
+      background: var(--fill);
+      border-bottom: 2px solid var(--card-border);
     }
-    .view-tabs { display: flex; gap: 3px; background: var(--fill); padding: 3px; border-radius: 9px; }
-    .view-tab { padding: 5px 9px; border-radius: 7px; font-size: 12px; font-weight: 700; color: var(--sub); }
-    .view-tab.active { background: var(--bg); color: var(--ink); box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
-    .recent-meta { font-size: 11px; color: var(--faint); }
+    .tab-group { display: flex; gap: 4px; }
+    .tab-btn {
+      padding: 6px 11px; border-radius: 8px;
+      font-size: 12px; font-weight: 800; color: var(--sub);
+      border: 1.5px solid transparent;
+    }
+    .tab-btn.active {
+      background: var(--ink); color: #fff;
+    }
+    .meta-tag { font-size: 11px; font-weight: 700; color: var(--sub); }
 
-    .list { list-style: none; padding: 0 16px 20px; }
-    .row { display: flex; align-items: center; gap: 9px; padding: 9px 0; border-bottom: 1px solid var(--fill); }
-    .row-time { font-size: 11px; font-weight: 700; color: var(--accent); background: #eff6ff; padding: 3px 6px; border-radius: 6px; }
+    .list { list-style: none; padding: 0 14px; max-height: 320px; overflow-y: auto; }
+    .row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 11px 0; border-bottom: 1px solid var(--card-border);
+    }
+    .row:last-child { border-bottom: 0; }
+    .time-chip {
+      font-size: 11px; font-weight: 800; color: var(--accent);
+      background: var(--accent-soft); padding: 4px 7px; border-radius: 6px;
+      font-variant-numeric: tabular-nums;
+    }
     .row-main { flex: 1; min-width: 0; }
-    .row-name { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .row-sub { margin-top: 2px; font-size: 11px; color: var(--sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .row-note { margin-top: 2px; font-size: 11px; color: var(--accent); font-weight: 600; }
-    .row-qty { text-align: right; }
-    .row-qty b { display: block; font-size: 15px; font-weight: 700; }
-    .row-qty span { font-size: 11px; color: var(--sub); }
-    .list .empty { padding: 18px 0; font-size: 13px; color: var(--faint); }
-
-    /* ── 🧊 3D 입체 창고 & GPS 맵 뷰 ── */
-    .map3d-wrap {
-      margin: 6px 16px 20px; border-radius: 16px; background: #0f172a; color: #fff;
-      padding: 14px; overflow: hidden; position: relative;
-    }
-    .map3d-head { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #94a3b8; margin-bottom: 8px; }
-    .scene {
-      width: 100%; height: 250px; perspective: 700px;
-      display: flex; align-items: center; justify-content: center;
-      touch-action: none; user-select: none; cursor: grab;
-    }
-    .floor {
-      width: 240px; height: 200px;
-      background:
-        linear-gradient(rgba(59,130,246,0.2) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(59,130,246,0.2) 1px, transparent 1px),
-        #1e293b;
-      background-size: 40px 40px;
-      border: 2px solid #3b82f6; border-radius: 10px;
-      transform-style: preserve-3d;
-      transform: rotateX(55deg) rotateZ(-25deg);
-      display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(2, 1fr);
-      gap: 10px; padding: 12px;
-      box-shadow: 0 25px 40px rgba(0,0,0,0.5);
-    }
-    .zone-cell {
-      border: 1px dashed rgba(255,255,255,0.3); border-radius: 6px;
-      position: relative; transform-style: preserve-3d;
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
-      background: rgba(15,23,42,0.45);
-    }
-    .zone-lbl { font-size: 10px; font-weight: 800; color: #93c5fd; transform: translateZ(2px); }
-    .pillar {
-      width: 26px; height: 26px; background: linear-gradient(135deg, #3b82f6, #10b981);
-      border-radius: 4px; position: relative; transform-style: preserve-3d;
-      transition: transform 0.3s ease;
-      box-shadow: 0 0 12px rgba(16,185,129,0.5);
-    }
-    .pillar-top {
-      position: absolute; inset: 0; background: #34d399; border-radius: 4px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 9px; font-weight: 900; color: #064e3b;
-    }
-    .map-detail {
-      margin-top: 8px; padding-top: 8px; border-top: 1px solid #334155;
-      font-size: 12px; color: #e2e8f0; line-height: 1.5;
-    }
+    .row-name { font-size: 14px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .row-sub { margin-top: 2px; font-size: 12px; font-weight: 600; color: var(--sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .row-note { margin-top: 3px; font-size: 11px; font-weight: 700; color: #d97706; }
+    .row-qty { text-align: right; font-variant-numeric: tabular-nums; }
+    .row-qty b { display: block; font-size: 16px; font-weight: 900; color: var(--ink); }
+    .row-qty span { font-size: 11px; font-weight: 700; color: var(--sub); }
+    .empty { padding: 24px 0; text-align: center; font-size: 13px; font-weight: 600; color: var(--faint); }
 
     .toast {
       position: fixed; z-index: 100; left: 50%; transform: translateX(-50%);
       bottom: calc(20px + env(safe-area-inset-bottom, 0px));
-      padding: 11px 16px; border-radius: 12px; background: var(--ink); color: #fff;
-      font-size: 13px; font-weight: 600; box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+      padding: 11px 18px; border-radius: 12px;
+      background: #0f172a; color: #fff; border: 2px solid #38bdf8;
+      font-size: 13px; font-weight: 700; box-shadow: 0 8px 24px rgba(0,0,0,0.35);
     }
   </style>
 </head>
 <body>
 
 <main class="app" id="app">
-  <!-- 상단 작업자 설정 & GPS 표시 & 시트 동기화 바 -->
-  <div class="topbar">
-    <div class="top-chips">
-      <button type="button" class="chip-btn" id="workerBtn">👤 작업자: 미지정</button>
-      <span class="gps-pill off" id="gpsStatus">📍 GPS 대기</span>
+  <!-- 상단 콘솔 바 (픽셀 아이콘 + 작업자 시트 지정 + 테마 스위치) -->
+  <header class="console-header">
+    <div class="brand">
+      <!-- 16x16 픽셀 아트 바코드 스캐너 아이콘 -->
+      <svg class="px" width="20" height="20" viewBox="0 0 16 16">
+        <path fill="#38bdf8" d="M2 2h9v5H2z"/>
+        <path fill="#0284c7" d="M3 3h7v3H3z"/>
+        <path fill="#ef4444" d="M11 3h4v2h-4z"/>
+        <path fill="#94a3b8" d="M5 7h4v6H5z"/>
+        <path fill="#475569" d="M4 13h6v2H4z"/>
+      </svg>
+      <span>SCM 재고스캐너</span>
     </div>
-    <button type="button" class="chip-btn" id="syncBtn">🔄 시트 새로고침</button>
-  </div>
+    <div class="header-actions">
+      <button type="button" class="h-btn" id="workerBtn" title="작업자 이름별로 시트가 따로 생성됩니다">
+        <!-- 픽셀 작업자 아이콘 -->
+        <svg class="px" width="14" height="14" viewBox="0 0 16 16">
+          <path fill="#fbbf24" d="M4 2h8v3H3V3h1z"/>
+          <path fill="#fde68a" d="M5 5h6v4H5z"/>
+          <path fill="#60a5fa" d="M3 10h10v5H3z"/>
+        </svg>
+        <span id="workerText">작업자 입력</span>
+      </button>
+      <button type="button" class="h-btn" id="themeBtn">🎨 테마</button>
+      <button type="button" class="h-btn" id="syncBtn">🔄</button>
+    </div>
+  </header>
 
-  <!-- 배터리 절약형 카메라 -->
-  <section class="cam" id="cam">
+  <!-- 카메라 뷰파인더 -->
+  <section class="cam-card" id="cam">
     <div id="reader"></div>
-    <div class="guide"></div>
-    <div class="cam-state" id="camState"><span class="dot"></span><span id="camText">스캔 중</span></div>
-    <button type="button" class="cam-hold" id="camHold" hidden>✕ 여기를 탭하거나 뒤로가기를 누르면 다시 스캔합니다</button>
-    <button type="button" class="cam-sleep" id="camSleep" hidden>
+    <div class="hud-frame">
+      <div class="hud-corner tl"></div>
+      <div class="hud-corner tr"></div>
+      <div class="hud-corner bl"></div>
+      <div class="hud-corner br"></div>
+      <div class="laser-beam"></div>
+    </div>
+    <div class="cam-status"><span class="led"></span><span id="camText">스캔 대기 중</span></div>
+    <button type="button" class="cam-overlay-btn" id="camHold" hidden>
+      <span>✕ 여기를 탭하거나 뒤로가기를 누르면 다시 스캔합니다</span>
+    </button>
+    <button type="button" class="cam-overlay-btn" id="camSleep" hidden>
       <span>🔋 배터리 절약 대기 모드 (카메라 꺼짐)</span>
-      <small>화면을 탭하면 즉시 카메라가 켜집니다</small>
+      <small>화면을 탭하면 즉시 레이저 스캔이 다시 시작됩니다</small>
     </button>
   </section>
 
-  <!-- 입력 영역 -->
-  <section class="entry">
-    <div class="search">
-      <input id="search" type="search" placeholder="품번, 자재명 또는 업체명 검색" autocomplete="off">
+  <!-- 입력 작업 카드 -->
+  <section class="work-card">
+    <div class="search-wrap">
+      <div class="search-box">
+        <svg class="px" width="16" height="16" viewBox="0 0 16 16">
+          <path fill="#64748b" d="M5 2h5v2H5zM3 4h2v5H3zM10 4h2v5h-2zM5 9h5v2H5zM10 10h2v2h2v2h-2v-2h-2z"/>
+        </svg>
+        <input id="search" type="search" placeholder="품번, 자재명 또는 공급업체 검색" autocomplete="off">
+      </div>
       <ul class="suggest" id="suggest" hidden></ul>
     </div>
 
-    <div class="item idle" id="item">
+    <!-- 선택된 자재 모니터 -->
+    <div class="item-monitor idle" id="item">
       <div class="item-top">
-        <p class="item-code" id="itemCode">백데이터 불러오는 중...</p>
+        <span class="item-code" id="itemCode">데이터 불러오는 중...</span>
         <div class="badges">
-          <p class="unit mult" id="itemLooseUnit" hidden></p>
-          <p class="unit" id="itemUnit" hidden></p>
+          <span class="badge-pill mult" id="itemLooseUnit" hidden></span>
+          <span class="badge-pill" id="itemUnit" hidden></span>
         </div>
       </div>
-      <p class="item-name" id="itemName">바코드를 비추거나 검색하세요</p>
+      <p class="item-name" id="itemName">바코드를 비추거나 검색해서 선택하세요</p>
     </div>
 
-    <!-- 창고 구역 원터치 선택 (3D 맵 연동) -->
-    <div class="zone-bar" id="zoneBar">
-      <button type="button" class="zone-chip active" data-zone="A구역">📍 A구역</button>
-      <button type="button" class="zone-chip" data-zone="B구역">📍 B구역</button>
-      <button type="button" class="zone-chip" data-zone="C구역">📍 C구역</button>
-      <button type="button" class="zone-chip" data-zone="D구역">📍 D구역</button>
-      <button type="button" class="zone-chip" data-zone="생산대기">📍 생산대기</button>
-      <button type="button" class="zone-chip" data-zone="야적장">📍 야적장</button>
-    </div>
-
-    <!-- 왼쪽: 잔량 / 오른쪽: 파렛트 -->
-    <div class="counts">
-      <label class="field" id="looseField">
-        <span id="looseLabel">잔량(낱개)</span>
+    <!-- 왼쪽: 잔량(롤/묶음) / 오른쪽: 파렛트 -->
+    <div class="counts-grid">
+      <label class="slot" id="looseField">
+        <div class="slot-head" id="looseHead">
+          <!-- 16x16 픽셀 롤 자재 아이콘 -->
+          <svg class="px" width="16" height="16" viewBox="0 0 16 16">
+            <path fill="#38bdf8" d="M4 2h8v3H4zM3 5h10v8H3zM4 13h8v1H4z"/>
+            <path fill="#0284c7" d="M6 3h4v1H6z"/>
+            <path fill="#e0f2fe" d="M5 6h6v6H5z"/>
+          </svg>
+          <span id="looseLabel">잔량 (낱개)</span>
+        </div>
         <input id="loose" type="text" inputmode="decimal" placeholder="0" autocomplete="off" disabled>
       </label>
-      <label class="field" id="palletField">
-        <span>파렛트</span>
+
+      <label class="slot" id="palletField">
+        <div class="slot-head">
+          <!-- 16x16 픽셀 파렛트+박스 아이콘 -->
+          <svg class="px" width="16" height="16" viewBox="0 0 16 16">
+            <path fill="#f59e0b" d="M3 2h4v4H3zM9 2h4v4H9zM3 7h10v4H3z"/>
+            <path fill="#d97706" d="M4 3h2v2H4zM10 3h2v2h-2z"/>
+            <path fill="#78350f" d="M1 12h14v2H1zM2 14h3v1H2zM7 14h2v1H7zM11 14h3v1h-3z"/>
+          </svg>
+          <span>파렛트 수</span>
+        </div>
         <input id="pallets" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="0" autocomplete="off" disabled>
       </label>
     </div>
 
-    <div class="note-box">
-      <input id="note" type="text" placeholder="특이사항 메모 (선택: 파손, 세부위치, LOT 등)" autocomplete="off" disabled>
+    <!-- 특이사항 입력 -->
+    <div class="note-slot">
+      <svg class="px" width="15" height="15" viewBox="0 0 16 16">
+        <path fill="#f59e0b" d="M10 2h4v4h-4zM6 6h4v4H6zM2 10h4v4H2z"/>
+      </svg>
+      <input id="note" type="text" placeholder="특이사항 메모 (파손, LOT, 위치 등 — PC에서 수정 가능)" autocomplete="off" disabled>
     </div>
 
-    <button type="button" class="save solo" id="save" disabled>
-      <span class="calc" id="calcText"></span>
-      <span class="label" id="saveLabel">자재를 선택하세요</span>
+    <!-- 입체 저장 버튼 -->
+    <button type="button" class="save-btn solo" id="save" disabled>
+      <span class="save-calc" id="calcText"></span>
+      <span id="saveLabel">자재를 선택하세요</span>
     </button>
   </section>
 
-  <!-- 하단: 시간순 이력 / 품목별 합계 / 3D 창고맵 -->
-  <section class="recent">
-    <div class="recent-head">
-      <div class="view-tabs">
-        <button type="button" class="view-tab active" id="tabLog" onclick="setViewMode('log')">시간순 이력</button>
-        <button type="button" class="view-tab" id="tabSum" onclick="setViewMode('summary')">품목별 합계</button>
-        <button type="button" class="view-tab" id="tab3d" onclick="setViewMode('map3d')">🧊 3D 창고뷰</button>
+  <!-- 하단: 작업자별 스캔 이력 & 품목별 통합집계 -->
+  <section class="log-card">
+    <div class="log-header">
+      <div class="tab-group">
+        <button type="button" class="tab-btn active" id="tabLog" onclick="setViewMode('log')">내 시트 스캔이력</button>
+        <button type="button" class="tab-btn" id="tabSum" onclick="setViewMode('summary')">전체 실사집계</button>
       </div>
-      <span class="recent-meta" id="recentMeta"></span>
+      <span class="meta-tag" id="recentMeta"></span>
     </div>
-
     <ol class="list" id="list"></ol>
-
-    <!-- 3D 입체 창고 시각화 컨테이너 -->
-    <div class="map3d-wrap" id="map3dWrap" hidden>
-      <div class="map3d-head">
-        <span>손가락으로 드래그해 3D 각도를 회전하세요</span>
-        <button type="button" style="color:#60a5fa;font-weight:700;" onclick="reset3dAngle()">각도 초기화</button>
-      </div>
-      <div class="scene" id="scene3d">
-        <div class="floor" id="floor3d"></div>
-      </div>
-      <div class="map-detail" id="mapDetail">구역 블록을 터치하면 해당 위치에 보관된 자재 목록이 표시됩니다.</div>
-    </div>
   </section>
 </main>
 
@@ -371,8 +484,7 @@
 <script>
 const API_URL = 'https://script.google.com/macros/s/AKfycbyMrPtlVmS9tTHUDS5WrqNQp9LHZD1LKlKzhsRSkfuJNMENuswVDcSgni2GmwMXGkYz/exec';
 const API_KEY = 'dbslcka1!';
-const SLEEP_TIMEOUT_MS = 20000; // ★ 20초간 스캔 없으면 카메라 하드웨어 완전 종료 (배터리 절약)
-const ZONES = ['A구역', 'B구역', 'C구역', 'D구역', '생산대기', '야적장'];
+const SLEEP_TIMEOUT_MS = 20000;
 
 const LOOSE_RULES = [
   { type: 'code',   match: '41370026',   mult: 2 },
@@ -388,11 +500,41 @@ let excluded = [];
 let current = null;
 let recent = [];
 let viewMode = 'log';
-let currentZone = localStorage.getItem('inv_zone') || 'A구역';
 let currentWorker = localStorage.getItem('inv_worker') || '';
-let currentGps = '';
+let currentTheme = localStorage.getItem('inv_theme') || 'pro';
 let suggestions = [];
 let lastBackPress = 0;
+
+/* ════════ 테마 전환 (모던 프로 <-> Aseprite 도트) ════════ */
+function applyTheme(t) {
+  currentTheme = t;
+  document.documentElement.setAttribute('data-theme', t);
+  localStorage.setItem('inv_theme', t);
+  $('themeBtn').textContent = t === 'pro' ? '👾 도트UI' : '✨ 모던UI';
+}
+$('themeBtn').addEventListener('click', () => {
+  applyTheme(currentTheme === 'pro' ? 'pixel' : 'pro');
+});
+
+/* ════════ 작업자 설정 (작업자 이름별로 구글 시트 탭 자동 분리) ════════ */
+function updateWorkerUI() {
+  if (currentWorker) {
+    $('workerText').textContent = currentWorker + ' (실사_' + currentWorker + ')';
+    $('workerBtn').classList.add('worker-active');
+  } else {
+    $('workerText').textContent = '작업자 입력';
+    $('workerBtn').classList.remove('worker-active');
+  }
+}
+$('workerBtn').addEventListener('click', () => {
+  const name = prompt('작업자 이름을 입력해주세요.\n구글 시트에 [실사_이름] 탭이 자동으로 생성되어 본인 내역만 따로 기록됩니다.', currentWorker);
+  if (name !== null) {
+    currentWorker = name.trim();
+    localStorage.setItem('inv_worker', currentWorker);
+    updateWorkerUI();
+    renderRecent();
+  }
+});
 
 function getLooseMult(item) {
   if (item.looseMult && item.looseMult > 1) return item.looseMult;
@@ -408,47 +550,7 @@ function getLooseMult(item) {
   return 1;
 }
 
-/* ════════ 작업자 이름 & 구역 & GPS 추적 ════════ */
-function updateWorkerUI() {
-  $('workerBtn').textContent = '👤 작업자: ' + (currentWorker || '터치해 입력');
-}
-$('workerBtn').addEventListener('click', () => {
-  const name = prompt('본인의 이름(또는 초성)을 입력해주세요.\n시트에 작업자 이름으로 기록됩니다.', currentWorker);
-  if (name !== null) {
-    currentWorker = name.trim();
-    localStorage.setItem('inv_worker', currentWorker);
-    updateWorkerUI();
-  }
-});
-
-$('zoneBar').addEventListener('click', (e) => {
-  const btn = e.target.closest('[data-zone]');
-  if (!btn) return;
-  currentZone = btn.dataset.zone;
-  localStorage.setItem('inv_zone', currentZone);
-  document.querySelectorAll('.zone-chip').forEach((b) => b.classList.toggle('active', b.dataset.zone === currentZone));
-});
-
-function initGps() {
-  if (!navigator.geolocation) return;
-  navigator.geolocation.watchPosition(
-    (pos) => {
-      const lat = pos.coords.latitude.toFixed(5);
-      const lng = pos.coords.longitude.toFixed(5);
-      const acc = Math.round(pos.coords.accuracy);
-      currentGps = lat + ',' + lng;
-      $('gpsStatus').textContent = '📍 GPS 수신중 (±' + acc + 'm)';
-      $('gpsStatus').classList.remove('off');
-    },
-    () => {
-      $('gpsStatus').textContent = '📍 실내/GPS 미수신';
-      $('gpsStatus').classList.add('off');
-    },
-    { enableHighAccuracy: true, maximumAge: 15000, timeout: 10000 }
-  );
-}
-
-/* ════════ 배터리 절약형 카메라 엔진 (20초 자동 절전 & 스캔 시 전원 차단) ════════ */
+/* ════════ 배터리 절약형 카메라 제어 ════════ */
 let scanner = null;
 let camRunning = false;
 let sleepTimer = null;
@@ -457,9 +559,7 @@ let lastScan = { code: '', t: 0 };
 function resetSleepTimer() {
   clearTimeout(sleepTimer);
   if (camRunning && !current) {
-    sleepTimer = setTimeout(() => {
-      stopCameraHardware(true);
-    }, SLEEP_TIMEOUT_MS);
+    sleepTimer = setTimeout(() => stopCameraHardware(true), SLEEP_TIMEOUT_MS);
   }
 }
 
@@ -478,10 +578,9 @@ async function startCameraHardware() {
     });
   }
   try {
-    // FPS를 8로 낮춰 발열과 배터리 소모 대폭 감소
     await scanner.start({ facingMode: 'environment' }, { fps: 8, disableFlip: true }, onDecode, () => {});
     camRunning = true;
-    $('camText').textContent = '스캔 중 (20초 후 자동 절전)';
+    $('camText').textContent = '레이저 스캔 중 (20초 후 절전)';
     resetSleepTimer();
   } catch (e) {
     camRunning = false;
@@ -495,9 +594,7 @@ async function stopCameraHardware(isSleep) {
     try { await scanner.stop(); } catch (e) {}
   }
   camRunning = false;
-  if (isSleep && !current) {
-    $('camSleep').hidden = false;
-  }
+  if (isSleep && !current) $('camSleep').hidden = false;
 }
 
 $('camSleep').addEventListener('click', () => startCameraHardware());
@@ -518,11 +615,9 @@ function onDecode(text) {
 function rejectScan(code) {
   beep(true);
   resetSleepTimer();
-  $('item').className = 'item reject';
+  $('item').className = 'item-monitor reject';
   $('itemCode').textContent = code;
   $('itemName').textContent = '관리 대상 자재가 아닙니다 (단량 미등록)';
-  $('cam').classList.add('reject');
-  setTimeout(() => $('cam').classList.remove('reject'), 800);
 }
 
 /* ════════ 자재 선택 · 계산 · 저장 ════════ */
@@ -532,13 +627,12 @@ function esc(s) { return String(s || '').replace(/[&<>"']/g, (c) => ({ '&': '&am
 
 function pick(item, source) {
   current = item;
-  // ★ 바코드가 잡히면 카메라 렌즈 전원을 즉시 꺼서 배터리 절약!
   stopCameraHardware(false);
   $('app').classList.add('picking');
   $('camHold').hidden = false;
 
   const lMult = item.looseMult || 1;
-  $('item').className = 'item';
+  $('item').className = 'item-monitor active';
   $('itemCode').textContent = item.code + (item.vendor ? ' · ' + item.vendor : '');
   $('itemUnit').textContent = '1파렛트=' + fmt(item.unit);
   $('itemUnit').hidden = false;
@@ -547,11 +641,11 @@ function pick(item, source) {
     $('itemLooseUnit').textContent = '잔량 1묶음=' + lMult + '롤';
     $('itemLooseUnit').hidden = false;
     $('looseLabel').textContent = '잔량 묶음 (×' + lMult + '배수)';
-    $('looseLabel').className = 'highlight';
+    $('looseHead').classList.add('mult-on');
   } else {
     $('itemLooseUnit').hidden = true;
     $('looseLabel').textContent = '잔량 (낱개)';
-    $('looseLabel').className = '';
+    $('looseHead').classList.remove('mult-on');
   }
 
   $('itemName').textContent = item.name;
@@ -566,11 +660,13 @@ function cancelPick() {
   document.activeElement && document.activeElement.blur();
   $('app').classList.remove('picking');
   $('camHold').hidden = true;
-  $('item').className = 'item idle';
-  $('itemCode').textContent = '관리 자재 ' + items.length + '개';
+  $('item').className = 'item-monitor idle';
+  $('itemCode').textContent = '관리 자재 ' + items.length + '개 로드됨';
   $('itemUnit').hidden = true;
   $('itemLooseUnit').hidden = true;
-  $('itemName').textContent = '바코드를 비추거나 검색하세요';
+  $('looseLabel').textContent = '잔량 (낱개)';
+  $('looseHead').classList.remove('mult-on');
+  $('itemName').textContent = '바코드를 비추거나 검색해서 선택하세요';
   ['loose', 'pallets', 'note'].forEach((id) => { $(id).disabled = true; $(id).value = ''; });
   updateCalc();
   startCameraHardware();
@@ -603,14 +699,23 @@ function updateCalc() {
   if (p !== null && p > 0) parts.push(current.unit + '×' + p);
   const screen = parts.length ? parts.join(' + ') : '메모만 저장';
 
+  const sheetTag = '실사_' + (currentWorker || '미지정');
   btn.disabled = false; btn.classList.remove('solo');
-  $('calcText').textContent = '[' + currentZone + '] ' + screen;
-  $('saveLabel').textContent = fmt(total) + '개 저장';
+  $('calcText').textContent = '[' + sheetTag + '] ' + screen;
+  $('saveLabel').textContent = fmt(total) + '개 저장 ⏎';
   return { total, screen, pallets: p, loose: l, note: noteS };
 }
 
 function save() {
   if (!current) return;
+  if (!currentWorker) {
+    const w = prompt('처음 스캔 시 작업자 이름을 입력해주세요.\n(구글 시트에 [실사_이름] 탭으로 자동 분류됩니다)');
+    if (w && w.trim()) {
+      currentWorker = w.trim();
+      localStorage.setItem('inv_worker', currentWorker);
+      updateWorkerUI();
+    }
+  }
   const c = updateCalc();
   if (!c) return;
   const now = new Date();
@@ -623,9 +728,7 @@ function save() {
     pallets: c.pallets === null ? '' : c.pallets,
     loose: c.loose === null ? '' : c.loose,
     note: c.note || '',
-    worker: currentWorker,
-    zone: currentZone,
-    gps: currentGps,
+    worker: currentWorker || '미지정',
     qty: c.total,
     formula: c.screen,
     time: pad(now.getHours()) + ':' + pad(now.getMinutes()) + ':' + pad(now.getSeconds()),
@@ -649,14 +752,14 @@ async function call(method, payload) {
 }
 
 async function boot() {
-  $('itemCode').textContent = '시트 동기화 중...';
+  $('itemCode').textContent = '구글 시트 동기화 중...';
   try {
     const data = await call('GET', { action: 'boot' });
     items = (data.items || []).map((it) => Object.assign({}, it, { looseMult: getLooseMult(it) }));
     excluded = data.excluded || [];
     itemsByLen = items.slice().sort((a, b) => b.code.length - a.code.length);
     recent = (data.recent || []).map((r) => Object.assign({ state: 'done' }, r));
-    if (!current) $('itemCode').textContent = '관리 자재 ' + items.length + '개';
+    if (!current) $('itemCode').textContent = '관리 자재 ' + items.length + '개 로드됨';
     renderRecent();
   } catch (e) {
     toast('동기화 실패: ' + e.message);
@@ -676,34 +779,31 @@ async function send(req) {
   renderRecent();
 }
 
-/* ════════ 하단 탭 & 🧊 3D 창고 시각화 ════════ */
+/* ════════ 하단 탭 렌더링 (내 시트 이력 vs 전체 실사집계) ════════ */
 function setViewMode(mode) {
   viewMode = mode;
   $('tabLog').classList.toggle('active', mode === 'log');
   $('tabSum').classList.toggle('active', mode === 'summary');
-  $('tab3d').classList.toggle('active', mode === 'map3d');
-  $('list').hidden = mode === 'map3d';
-  $('map3dWrap').hidden = mode !== 'map3d';
   renderRecent();
 }
 
 function renderRecent() {
-  $('recentMeta').textContent = '총 ' + recent.length + '건';
-  if (viewMode === 'map3d') {
-    render3dWarehouse();
-    return;
-  }
   const list = $('list');
-  if (!recent.length) {
-    list.innerHTML = '<li class="empty">아직 스캔한 내역이 없습니다</li>';
-    return;
-  }
+  const myLogs = currentWorker
+    ? recent.filter((r) => !r.worker || r.worker === currentWorker)
+    : recent;
+
   if (viewMode === 'log') {
-    list.innerHTML = recent.map((r, i) => {
-      const tags = [r.code, r.vendor, r.zone ? '📍' + r.zone : '', r.worker ? '👤' + r.worker : '', r.formula].filter(Boolean).join(' · ');
+    $('recentMeta').textContent = (currentWorker ? '실사_' + currentWorker : '전체') + ' · ' + myLogs.length + '건';
+    if (!myLogs.length) {
+      list.innerHTML = '<li class="empty">아직 스캔한 내역이 없습니다</li>';
+      return;
+    }
+    list.innerHTML = myLogs.map((r, i) => {
+      const tags = [r.code, r.vendor, r.worker ? '👤' + r.worker : '', r.formula].filter(Boolean).join(' · ');
       const noteHtml = r.note ? '<p class="row-note">📌 ' + esc(r.note) + '</p>' : '';
       return '<li class="row ' + (r.state || 'done') + '" data-i="' + i + '">' +
-               '<span class="row-time">' + esc(r.time || '--:--') + '</span>' +
+               '<span class="time-chip">' + esc(r.time || '--:--') + '</span>' +
                '<div class="row-main"><p class="row-name">' + esc(r.name || r.code) + '</p><p class="row-sub">' + esc(tags) + '</p>' + noteHtml + '</div>' +
                '<div class="row-qty"><b>' + fmt(r.qty) + '</b></div>' +
              '</li>';
@@ -711,91 +811,38 @@ function renderRecent() {
     return;
   }
 
+  // 전체 실사집계 (시간별 중복 이력 없이 작업자별 합계만 깔끔하게 표시)
   const groups = {};
   const order = [];
-  recent.slice().reverse().forEach((r) => {
+  recent.forEach((r) => {
     if (r.state === 'failed') return;
     if (!groups[r.code]) {
-      order.unshift(r.code);
-      groups[r.code] = { code: r.code, name: r.name, vendor: r.vendor, total: 0, count: 0, zones: [], logs: [] };
+      order.push(r.code);
+      groups[r.code] = { code: r.code, name: r.name, vendor: r.vendor, total: 0, count: 0, byWorker: {}, notes: [] };
     }
     const g = groups[r.code];
     g.total = round(g.total + (Number(r.qty) || 0));
     g.count += 1;
-    if (r.zone && g.zones.indexOf(r.zone) === -1) g.zones.push(r.zone);
-    g.logs.push('[' + fmt(r.qty) + ']');
+    const w = r.worker || '미지정';
+    g.byWorker[w] = round((g.byWorker[w] || 0) + (Number(r.qty) || 0));
+    if (r.note) g.notes.push(w + ': ' + r.note);
   });
 
+  $('recentMeta').textContent = '총 ' + order.length + '종 집계됨';
+  if (!order.length) {
+    list.innerHTML = '<li class="empty">집계된 품목이 없습니다</li>';
+    return;
+  }
   list.innerHTML = order.map((c) => {
     const g = groups[c];
-    const zStr = g.zones.length ? '📍' + g.zones.join(',') + ' · ' : '';
+    const workerStr = Object.keys(g.byWorker).map((w) => w + '(' + fmt(g.byWorker[w]) + ')').join(' / ');
+    const noteHtml = g.notes.length ? '<p class="row-note">📌 ' + esc(g.notes.join(' | ')) + '</p>' : '';
     return '<li class="row done">' +
-             '<div class="row-main"><p class="row-name">' + esc(g.name) + '</p><p class="row-sub">' + zStr + esc(g.code) + ' · ' + esc(g.logs.join('+')) + '</p></div>' +
-             '<div class="row-qty"><b>총 ' + fmt(g.total) + '</b><span>' + g.count + '회</span></div>' +
+             '<div class="row-main"><p class="row-name">' + esc(g.name) + '</p><p class="row-sub">' + esc(g.code) + (g.vendor ? ' · ' + esc(g.vendor) : '') + ' · 👤 ' + esc(workerStr) + '</p>' + noteHtml + '</div>' +
+             '<div class="row-qty"><b>총 ' + fmt(g.total) + '</b><span>' + g.count + '회 스캔</span></div>' +
            '</li>';
   }).join('');
 }
-
-/* 🧊 3D 창고 렌더링 및 터치 회전 제어 */
-let rotX = 55, rotZ = -25;
-function render3dWarehouse() {
-  const floor = $('floor3d');
-  const zoneMap = {};
-  ZONES.forEach((z) => { zoneMap[z] = { items: {}, totalQty: 0, count: 0 }; });
-
-  recent.forEach((r) => {
-    if (r.state === 'failed') return;
-    const z = ZONES.indexOf(r.zone) > -1 ? r.zone : 'A구역';
-    zoneMap[z].totalQty = round(zoneMap[z].totalQty + (Number(r.qty) || 0));
-    zoneMap[z].count += 1;
-    zoneMap[z].items[r.name || r.code] = round((zoneMap[z].items[r.name || r.code] || 0) + (Number(r.qty) || 0));
-  });
-
-  floor.innerHTML = ZONES.map((z) => {
-    const d = zoneMap[z];
-    const h = d.count ? Math.min(80, 14 + Math.log10(d.totalQty + 1) * 22) : 0;
-    const pillarHtml = d.count
-      ? '<div class="pillar" style="transform: translateZ(' + (h / 2) + 'px); height:' + h + 'px;">' +
-          '<div class="pillar-top">' + d.count + '건</div>' +
-        '</div>'
-      : '';
-    return '<div class="zone-cell" data-z="' + z + '">' +
-             pillarHtml +
-             '<span class="zone-lbl">' + z + '</span>' +
-           '</div>';
-  }).join('');
-
-  floor.querySelectorAll('.zone-cell').forEach((cell) => {
-    cell.addEventListener('click', () => {
-      const z = cell.dataset.z;
-      const d = zoneMap[z];
-      const entries = Object.entries(d.items);
-      $('mapDetail').innerHTML = entries.length
-        ? '<b>📍 ' + z + ' 보관 자재 (' + entries.length + '종):</b><br>' +
-          entries.map(([k, v]) => '• ' + esc(k) + ': <b>' + fmt(v) + '개</b>').join('<br>')
-        : '📍 <b>' + z + '</b>에는 아직 스캔된 자재가 없습니다.';
-    });
-  });
-}
-
-function reset3dAngle() {
-  rotX = 55; rotZ = -25;
-  $('floor3d').style.transform = 'rotateX(' + rotX + 'deg) rotateZ(' + rotZ + 'deg)';
-}
-
-(function init3dDrag() {
-  const scene = $('scene3d');
-  let startX = 0, startY = 0, dragging = false;
-  scene.addEventListener('pointerdown', (e) => { dragging = true; startX = e.clientX; startY = e.clientY; });
-  window.addEventListener('pointermove', (e) => {
-    if (!dragging) return;
-    rotZ += (e.clientX - startX) * 0.4;
-    rotX = Math.max(20, Math.min(80, rotX - (e.clientY - startY) * 0.3));
-    startX = e.clientX; startY = e.clientY;
-    $('floor3d').style.transform = 'rotateX(' + rotX + 'deg) rotateZ(' + rotZ + 'deg)';
-  });
-  window.addEventListener('pointerup', () => { dragging = false; });
-})();
 
 /* ════════ 검색 및 이벤트 ════════ */
 const norm = (s) => String(s || '').toLowerCase().replace(/\s+/g, '');
@@ -811,10 +858,10 @@ function renderSuggest() {
     ? suggestions.map((m, i) =>
         '<li><button type="button" data-i="' + i + '">' +
           '<span class="s-code">[' + esc(m.code) + ']</span>' +
-          '<span class="s-name">' + esc(m.name) + (m.vendor ? ' <span class="s-vendor">· ' + esc(m.vendor) + '</span>' : '') + '</span>' +
-          '<span class="s-unit">(단량:' + fmt(m.unit) + (m.looseMult > 1 ? '·×' + m.looseMult : '') + ')</span>' +
+          '<span class="s-name">' + esc(m.name) + (m.vendor ? ' · ' + esc(m.vendor) : '') + '</span>' +
+          '<span class="s-unit">단량:' + fmt(m.unit) + (m.looseMult > 1 ? ' / ×' + m.looseMult : '') + '</span>' +
         '</button></li>').join('')
-    : '<li class="empty">일치하는 자재가 없습니다</li>';
+    : '<li class="empty">일치하는 관리 자재가 없습니다</li>';
   box.hidden = false;
 }
 
@@ -827,7 +874,7 @@ $('suggest').addEventListener('click', (e) => {
 });
 
 document.addEventListener('pointerdown', (e) => {
-  if (!e.target.closest('.search') && !$('suggest').hidden) {
+  if (!e.target.closest('.search-wrap') && !$('suggest').hidden) {
     $('suggest').hidden = true;
     if (!current) startCameraHardware();
   }
@@ -839,7 +886,7 @@ $('pallets').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.pre
 $('note').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); save(); } });
 $('save').addEventListener('click', save);
 $('camHold').addEventListener('click', cancelPick);
-$('syncBtn').addEventListener('click', () => { toast('구글 시트 데이터를 새로 불러옵니다.'); boot(); });
+$('syncBtn').addEventListener('click', () => { toast('구글 시트 데이터를 새로고침합니다.'); boot(); });
 
 function initBackGuard() {
   try {
@@ -877,10 +924,9 @@ function toast(msg) {
 }
 
 /* ════════ 시작 ════════ */
+applyTheme(currentTheme);
 updateWorkerUI();
-document.querySelectorAll('.zone-chip').forEach((b) => b.classList.toggle('active', b.dataset.zone === currentZone));
 initBackGuard();
-initGps();
 boot();
 startCameraHardware();
 </script>
