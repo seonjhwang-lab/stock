@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <meta name="theme-color" content="#ffffff">
   <title>재고실사</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
@@ -15,25 +15,25 @@
       --fill: #f2f4f6;
       --line: #e5e8eb;
       --bg: #ffffff;
+      --accent: #2563eb;
       --danger: #e5383b;
       color-scheme: light;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
     [hidden] { display: none !important; }
-    html, body { height: 100%; overflow: hidden; background: var(--bg); }
+
+    html, body { height: 100%; background: var(--bg); overflow-x: hidden; }
     body {
-      font-family: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif;
+      font-family: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
       color: var(--ink);
       -webkit-font-smoothing: antialiased;
       letter-spacing: -0.01em;
     }
     button, input { font: inherit; color: inherit; }
     button { cursor: pointer; border: 0; background: none; }
-    :focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 
-    /* 한 화면 고정: 카메라 · 입력 · 최근 내역 */
     .app {
-      height: 100%;
+      min-height: 100%;
       display: flex;
       flex-direction: column;
       padding-top: env(safe-area-inset-top, 0px);
@@ -41,211 +41,226 @@
       margin: 0 auto;
     }
 
-    /* ── 카메라 ── */
+    /* ── 카메라 (자재 선택 시 44px 바로 자동 축소되어 키패드 가림 방지) ── */
     .cam {
       position: relative;
       flex: 0 0 auto;
-      height: clamp(140px, 26vh, 280px);
-      height: clamp(140px, 26dvh, 280px);
+      height: clamp(140px, 24dvh, 230px);
       margin: 10px 16px 0;
-      border-radius: 22px;
+      border-radius: 20px;
       overflow: hidden;
       background: #000;
       isolation: isolate;
+      transition: height 0.2s ease;
     }
+    .app.picking .cam {
+      height: 44px !important;
+      border-radius: 12px;
+    }
+    .app.picking .guide,
+    .app.picking #reader { opacity: 0.15; }
+    .app.picking .search { display: none; }
+
     #reader { position: absolute; inset: 0; }
     #reader video { display: block; width: 100% !important; height: 100% !important; object-fit: cover; }
-    #reader > div, #reader canvas { display: none !important; }   /* 라이브러리 기본 안내문 숨김 */
+    #reader > div, #reader canvas { display: none !important; }
 
     .guide {
       position: absolute; z-index: 2;
-      left: 12%; right: 12%; top: 30%; bottom: 30%;
+      left: 12%; right: 12%; top: 28%; bottom: 28%;
       border: 1.5px solid rgba(255, 255, 255, 0.7);
       border-radius: 14px;
       pointer-events: none;
-      transition: border-color .15s, background-color .15s, transform .15s;
     }
-    .cam.caught .guide { border-color: #fff; border-width: 2.5px; background: rgba(255, 255, 255, 0.10); transform: scale(1.02); }
     .cam.reject .guide { border-color: var(--danger); border-width: 2.5px; }
 
     .cam-state {
-      position: absolute; z-index: 3; left: 14px; bottom: 12px;
+      position: absolute; z-index: 3; left: 14px; bottom: 10px;
       display: flex; align-items: center; gap: 7px;
       font-size: 12px; font-weight: 600; color: rgba(255, 255, 255, 0.92);
     }
     .cam.caught .cam-state { display: none; }
     .cam-state .dot { width: 6px; height: 6px; border-radius: 50%; background: rgba(255, 255, 255, 0.5); }
-    .cam-state.live .dot { background: #fff; animation: blink 1.6s ease-in-out infinite; }
+    .cam-state.live .dot { background: #4ade80; animation: blink 1.6s ease-in-out infinite; }
     .cam-state.off .dot { background: var(--danger); }
     @keyframes blink { 50% { opacity: .25; } }
 
     .cam-hold {
       position: absolute; z-index: 4; inset: 0;
-      display: flex; align-items: flex-end; justify-content: center;
-      padding-bottom: 14px;
-      background: rgba(0, 0, 0, 0.38);
-      color: #fff; font-size: 14px; font-weight: 600;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(25, 31, 40, 0.88);
+      color: #fff; font-size: 13px; font-weight: 600;
     }
     .cam-error {
       position: absolute; z-index: 5; inset: 0;
-      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
-      padding: 0 28px; text-align: center;
-      color: #fff; font-size: 14px; line-height: 1.5; background: #111;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+      padding: 0 24px; text-align: center;
+      color: #fff; font-size: 13px; line-height: 1.4; background: #111;
     }
     .cam-error button {
-      padding: 8px 18px; border-radius: 999px;
-      border: 1px solid rgba(255, 255, 255, 0.5); color: #fff; font-size: 14px; font-weight: 600;
+      padding: 6px 16px; border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.5); color: #fff; font-size: 13px; font-weight: 600;
     }
 
-    /* ── 입력 ── */
-    .entry { flex: 0 0 auto; display: flex; flex-direction: column; gap: 14px; padding: 14px 20px 0; }
+    /* ── 입력 영역 ── */
+    .entry { flex: 0 0 auto; display: flex; flex-direction: column; gap: 10px; padding: 12px 18px 0; }
 
     .search { position: relative; }
     .search input {
-      width: 100%; height: 46px;
-      padding: 0 16px 0 42px;
-      border: 0; border-radius: 14px;
-      background: var(--fill) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' fill='none' stroke='%238b95a1' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='8' cy='8' r='6'/%3E%3Cpath d='m16.5 16.5-4.2-4.2'/%3E%3C/svg%3E") no-repeat 15px 50%;
-      font-size: 16px; outline: none;
-      -webkit-appearance: none; appearance: none;
+      width: 100%; height: 44px;
+      padding: 0 16px 0 40px;
+      border: 0; border-radius: 13px;
+      background: var(--fill) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='17' height='17' fill='none' stroke='%238b95a1' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='7.5' cy='7.5' r='5.5'/%3E%3Cpath d='m15.5 15.5-3.8-3.8'/%3E%3C/svg%3E") no-repeat 14px 50%;
+      font-size: 15px; outline: none;
     }
     .search input::placeholder { color: var(--faint); }
-    .search input::-webkit-search-cancel-button { -webkit-appearance: none; display: none; }
     .search input:focus { box-shadow: inset 0 0 0 1.5px var(--ink); }
+
     .suggest {
-      position: absolute; z-index: 20; left: 0; right: 0; top: calc(100% + 6px);
-      max-height: min(300px, 42vh);
+      position: absolute; z-index: 30; left: 0; right: 0; top: calc(100% + 5px);
+      max-height: min(280px, 45vh);
       overflow-y: auto; overscroll-behavior: contain;
       list-style: none; background: var(--bg);
       border: 1px solid var(--line); border-radius: 14px;
-      box-shadow: 0 12px 32px rgba(25, 31, 40, 0.14);
+      box-shadow: 0 12px 32px rgba(25, 31, 40, 0.16);
     }
     .suggest button {
       display: flex; width: 100%; align-items: baseline; gap: 6px;
-      padding: 12px 16px; text-align: left; font-size: 15px; line-height: 1.35;
+      padding: 11px 14px; text-align: left; font-size: 14px; line-height: 1.35;
     }
     .suggest li + li button { border-top: 1px solid var(--fill); }
     .suggest button:active, .suggest button.on { background: var(--fill); }
-    .suggest .s-code { flex: 0 0 auto; font-size: 13px; color: var(--sub); font-variant-numeric: tabular-nums; }
+    .suggest .s-code { flex: 0 0 auto; font-size: 12px; color: var(--sub); font-variant-numeric: tabular-nums; }
     .suggest .s-name { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
-    .suggest .s-unit { flex: 0 0 auto; font-size: 13px; color: var(--sub); font-variant-numeric: tabular-nums; }
-    .suggest .empty, .suggest .more { padding: 12px 16px; font-size: 13px; color: var(--sub); }
-    .suggest mark { background: none; color: var(--ink); font-weight: 700; }
-    .suggest .excl { padding: 11px 16px; border-top: 1px solid var(--fill); font-size: 14px; color: var(--faint); line-height: 1.4; }
-    .suggest .excl b { font-weight: 600; color: var(--sub); }
-    .suggest .excl small { display: block; margin-top: 1px; font-size: 12px; color: var(--danger); }
-    .suggest .more { border-top: 1px solid var(--fill); }
+    .suggest .s-vendor { font-weight: 500; color: var(--sub); font-size: 12px; }
+    .suggest .s-unit { flex: 0 0 auto; font-size: 12px; color: var(--sub); font-variant-numeric: tabular-nums; }
+    .suggest mark { background: none; color: var(--accent); font-weight: 700; }
+    .suggest .empty, .suggest .more { padding: 12px 14px; font-size: 13px; color: var(--sub); }
+    .suggest .excl { padding: 10px 14px; border-top: 1px solid var(--fill); font-size: 13px; color: var(--faint); }
+    .suggest .excl small { display: block; font-size: 11px; color: var(--danger); }
 
-    .item { min-height: 48px; }
-    .item-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-    .item-code { font-size: 13px; font-weight: 500; color: var(--sub); font-variant-numeric: tabular-nums; }
+    /* 선택 자재 정보 */
+    .item { min-height: 44px; }
+    .item-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+    .item-code { font-size: 13px; font-weight: 600; color: var(--sub); font-variant-numeric: tabular-nums; }
+    .badges { display: flex; gap: 5px; }
     .unit {
-      flex: 0 0 auto;
-      padding: 3px 9px; border-radius: 8px;
+      padding: 3px 8px; border-radius: 7px;
       background: var(--fill);
-      font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums;
+      font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums;
     }
+    .unit.mult { background: #dbeafe; color: var(--accent); }
     .item-name {
-      margin-top: 3px;
-      font-size: 20px; font-weight: 700; line-height: 1.3; letter-spacing: -0.02em;
-      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
-      word-break: keep-all; overflow-wrap: anywhere;
+      margin-top: 2px;
+      font-size: 19px; font-weight: 700; line-height: 1.25; letter-spacing: -0.02em;
+      word-break: keep-all;
     }
     .item.idle .item-name { color: var(--faint); }
-    .item.reject .item-name { color: var(--danger); font-size: 17px; }
+    .item.reject .item-name { color: var(--danger); font-size: 16px; }
 
-    .counts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    /* 수량 입력 (왼쪽: 잔량 / 오른쪽: 파렛트) */
+    .counts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
     .field {
       display: flex; flex-direction: column; gap: 2px;
-      padding: 9px 14px 8px;
-      border-radius: 14px; background: var(--fill);
-      transition: box-shadow .15s;
+      padding: 8px 12px 7px;
+      border-radius: 13px; background: var(--fill);
       cursor: text;
     }
-    .field:focus-within { box-shadow: inset 0 0 0 1.5px var(--ink); background: var(--bg); }
+    .field:focus-within { box-shadow: inset 0 0 0 1.8px var(--ink); background: var(--bg); }
     .field span { font-size: 12px; font-weight: 600; color: var(--sub); }
+    .field span.highlight { color: var(--accent); font-weight: 700; }
     .field input {
-      width: 100%; min-width: 0; height: 32px;
+      width: 100%; min-width: 0; height: 30px;
       border: 0; background: transparent; outline: none;
-      font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -0.02em;
+      font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums;
     }
     .field input::placeholder { color: var(--faint); }
-    .field input:disabled { opacity: 1; }
     .field.bad { box-shadow: inset 0 0 0 1.5px var(--danger); }
 
-    .save {
-      display: flex; align-items: center; justify-content: space-between; gap: 12px;
-      width: 100%; height: 56px; padding: 0 20px;
-      border-radius: 16px;
-      background: var(--ink); color: #fff;
-      font-size: 17px; font-weight: 700;
-      font-variant-numeric: tabular-nums;
-      transition: transform .08s, background-color .15s;
+    /* 특이사항 메모 입력칸 */
+    .note-box input {
+      width: 100%; height: 40px; padding: 0 13px;
+      border: 0; border-radius: 11px; background: var(--fill);
+      font-size: 14px; outline: none;
     }
-    .save .calc { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 15px; font-weight: 500; color: rgba(255, 255, 255, 0.62); }
+    .note-box input::placeholder { color: var(--faint); }
+    .note-box input:focus { box-shadow: inset 0 0 0 1.5px var(--ink); background: var(--bg); }
+
+    /* 저장 버튼 */
+    .save {
+      display: flex; align-items: center; justify-content: space-between; gap: 10px;
+      width: 100%; height: 52px; padding: 0 18px;
+      border-radius: 14px;
+      background: var(--ink); color: #fff;
+      font-size: 16px; font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+    .save .calc { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; font-weight: 500; color: rgba(255, 255, 255, 0.7); }
     .save .label { flex: 0 0 auto; }
     .save.solo { justify-content: center; }
     .save:active { transform: scale(0.98); }
     .save:disabled { background: var(--fill); color: var(--faint); }
-    .save:disabled .calc { color: var(--faint); }
 
-    /* ── 최근 내역 ── */
+    /* ── 하단: 시간순 스캔 이력 & 품목별 통합레포트 탭 ── */
     .recent {
-      flex: 1 1 auto; min-height: 0;
+      flex: 1 1 auto;
       display: flex; flex-direction: column;
-      margin-top: 18px;
-      border-top: 10px solid var(--fill);
+      margin-top: 14px;
+      border-top: 8px solid var(--fill);
     }
     .recent-head {
-      flex: 0 0 auto;
-      display: flex; justify-content: space-between; align-items: baseline;
-      padding: 14px 20px 2px;
-      font-size: 14px; font-weight: 600; color: var(--sub);
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 10px 18px 4px;
     }
-    .recent-head button { font-size: 13px; font-weight: 600; color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
-    .recent-meta { font-size: 13px; font-weight: 500; color: var(--faint); }
+    .view-tabs {
+      display: flex; gap: 4px; background: var(--fill); padding: 3px; border-radius: 9px;
+    }
+    .view-tab {
+      padding: 5px 10px; border-radius: 7px; font-size: 12px; font-weight: 700; color: var(--sub);
+    }
+    .view-tab.active {
+      background: var(--bg); color: var(--ink); box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    }
+    .recent-meta { font-size: 12px; font-weight: 500; color: var(--faint); }
     .list {
-      flex: 1 1 auto; min-height: 0; overflow-y: auto;
       list-style: none;
-      padding: 0 20px calc(12px + env(safe-area-inset-bottom, 0px));
-      -webkit-overflow-scrolling: touch;
+      padding: 0 18px calc(16px + env(safe-area-inset-bottom, 0px));
     }
-    .row { display: flex; align-items: center; gap: 12px; margin: 0 -20px; padding: 10px 20px; }
-    .row.fresh { animation: fresh 1.4s ease-out; }
-    @keyframes fresh { from { background: var(--fill); } to { background: transparent; } }
+    .row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--fill); }
+    .row-time {
+      flex: 0 0 auto; font-size: 12px; font-weight: 700; color: var(--accent);
+      background: #eff6ff; padding: 4px 7px; border-radius: 6px; font-variant-numeric: tabular-nums;
+    }
     .row-main { flex: 1; min-width: 0; }
-    .row-name { font-size: 16px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .row-sub { margin-top: 2px; font-size: 13px; color: var(--sub); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .row-name { font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .row-sub { margin-top: 2px; font-size: 12px; color: var(--sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .row-note { margin-top: 2px; font-size: 12px; color: var(--accent); font-weight: 600; }
     .row-qty { flex: 0 0 auto; text-align: right; font-variant-numeric: tabular-nums; }
-    .row-qty b { display: block; font-size: 17px; font-weight: 700; }
-    .row-qty span { display: block; margin-top: 1px; font-size: 12px; color: var(--faint); }
+    .row-qty b { display: block; font-size: 16px; font-weight: 700; }
+    .row-qty span { display: block; font-size: 11px; color: var(--sub); }
     .row.pending .row-name, .row.pending .row-qty b { color: var(--faint); }
     .row.failed .row-sub { color: var(--danger); }
-    .list .empty { padding: 20px 0; font-size: 14px; color: var(--faint); }
+    .list .empty { padding: 18px 0; font-size: 13px; color: var(--faint); }
 
     .toast {
-      position: fixed; z-index: 50; left: 50%; transform: translateX(-50%);
+      position: fixed; z-index: 100; left: 50%; transform: translateX(-50%);
       bottom: calc(20px + env(safe-area-inset-bottom, 0px));
-      width: max-content; max-width: calc(100% - 40px);
-      padding: 12px 18px; border-radius: 14px;
+      width: max-content; max-width: calc(100% - 32px);
+      padding: 11px 16px; border-radius: 12px;
       background: var(--ink); color: #fff;
-      font-size: 14px; font-weight: 500; line-height: 1.45; text-align: center;
-      box-shadow: 0 8px 24px rgba(25, 31, 40, 0.24);
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-      *, *::before, *::after { animation: none !important; transition: none !important; }
+      font-size: 13px; font-weight: 600; text-align: center;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
     }
   </style>
 </head>
 <body>
 
-<main class="app">
+<main class="app" id="app">
   <section class="cam" id="cam" aria-label="바코드 카메라">
     <div id="reader"></div>
     <div class="guide" aria-hidden="true"></div>
     <div class="cam-state" id="camState"><span class="dot"></span><span id="camText">카메라 준비 중</span></div>
-    <button type="button" class="cam-hold" id="camHold" hidden>탭하면 다시 스캔합니다</button>
+    <button type="button" class="cam-hold" id="camHold" hidden>✕ 여기를 탭하거나 뒤로가기를 누르면 다시 스캔합니다</button>
     <div class="cam-error" id="camError" hidden>
       <p id="camErrorText"></p>
       <button type="button" id="camRetry">다시 시도</button>
@@ -254,27 +269,36 @@
 
   <section class="entry">
     <div class="search">
-      <input id="search" type="search" placeholder="품번 뒷자리 또는 자재명 검색" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="search" aria-label="자재 검색">
+      <input id="search" type="search" placeholder="품번, 자재명 또는 업체명 검색" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="search">
       <ul class="suggest" id="suggest" hidden></ul>
     </div>
 
     <div class="item idle" id="item" aria-live="polite">
       <div class="item-top">
         <p class="item-code" id="itemCode">백데이터 불러오는 중</p>
-        <p class="unit" id="itemUnit" hidden></p>
+        <div class="badges">
+          <p class="unit mult" id="itemLooseUnit" hidden></p>
+          <p class="unit" id="itemUnit" hidden></p>
+        </div>
       </div>
       <p class="item-name" id="itemName">바코드를 비추거나 검색하세요</p>
     </div>
 
+    <!-- 왼쪽: 잔량 / 오른쪽: 파렛트 -->
     <div class="counts">
+      <label class="field" id="looseField">
+        <span id="looseLabel">잔량(낱개)</span>
+        <input id="loose" type="text" inputmode="decimal" placeholder="0" autocomplete="off" enterkeyhint="next" disabled>
+      </label>
       <label class="field" id="palletField">
         <span>파렛트</span>
-        <input id="pallets" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="0" autocomplete="off" enterkeyhint="next" disabled>
+        <input id="pallets" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="0" autocomplete="off" enterkeyhint="done" disabled>
       </label>
-      <label class="field" id="looseField">
-        <span>잔량(낱개)</span>
-        <input id="loose" type="text" inputmode="decimal" placeholder="0" autocomplete="off" enterkeyhint="done" disabled>
-      </label>
+    </div>
+
+    <!-- 자재 특이사항(메모) 입력칸 -->
+    <div class="note-box">
+      <input id="note" type="text" placeholder="특이사항 메모 (선택: 파손, 위치, LOT 등)" autocomplete="off" enterkeyhint="done" disabled>
     </div>
 
     <button type="button" class="save solo" id="save" disabled>
@@ -283,9 +307,12 @@
     </button>
   </section>
 
-  <section class="recent" aria-label="최근 입력">
+  <section class="recent" aria-label="스캔 내역 및 통합 레포트">
     <div class="recent-head">
-      <span>최근 입력</span>
+      <div class="view-tabs">
+        <button type="button" class="view-tab active" id="tabLog" onclick="setViewMode('log')">시간순 스캔이력</button>
+        <button type="button" class="view-tab" id="tabSum" onclick="setViewMode('summary')">품목별 통합합계</button>
+      </div>
       <span class="recent-meta" id="recentMeta"></span>
     </div>
     <ol class="list" id="list"></ol>
@@ -295,27 +322,76 @@
 <div class="toast" id="toast" role="status" hidden></div>
 
 <script>
-/* ════════ 설정 ════════
-   API_URL : Apps Script 웹앱 배포 주소(.../exec)
-   API_KEY : Code.gs의 CONFIG.API_KEY와 같은 값
-   API_URL이 예시 그대로면 데모 모드(시트 연결 없이 화면만 동작)로 열립니다. */
+/* ════════ 설정 ════════ */
 const API_URL = 'https://script.google.com/macros/s/AKfycbyMrPtlVmS9tTHUDS5WrqNQp9LHZD1LKlKzhsRSkfuJNMENuswVDcSgni2GmwMXGkYz/exec';
 const API_KEY = 'dbslcka1!';
 
-// 일반 계정(…/macros/s/…/exec)과 회사·학교 계정(…/a/macros/도메인/s/…/exec) 주소 모두 허용
-const DEMO = !/^https:\/\/script\.google\.com\/(a\/macros\/[^\/]+|macros)\/s\/[\w-]+\/exec$/.test(API_URL.trim());
 const DEDUPE_MS = 1500;
 const NOT_MANAGED = '관리 대상 자재가 아닙니다 (단량 미등록)';
 
+const LOOSE_RULES = [
+  { type: 'code',   match: '41370026',   mult: 2 },
+  { type: 'name',   match: '세퍼레이터', mult: 3 },
+  { type: 'vendor', match: '한국쓰리엠', mult: 5 },
+  { type: 'vendor', match: '효성티앤씨', mult: 4 }
+];
+
+function getLooseMult(item) {
+  if (item.looseMult && item.looseMult > 1) return item.looseMult;
+  const c = String(item.code || '').trim();
+  const n = String(item.name || '').replace(/\s+/g, '');
+  const v = String(item.vendor || '').replace(/\s+/g, '');
+  for (const r of LOOSE_RULES) {
+    const m = r.match.replace(/\s+/g, '');
+    if (r.type === 'code' && c === m) return r.mult;
+    if (r.type === 'name' && n.indexOf(m) > -1) return r.mult;
+    if (r.type === 'vendor' && (v.indexOf(m) > -1 || n.indexOf(m) > -1)) return r.mult;
+  }
+  return 1;
+}
+
 /* ════════ 상태 ════════ */
 const $ = (id) => document.getElementById(id);
-let items = [];            // [{code, name, unit}] — 단량(D열)이 있는 관리 대상만
-let itemsByLen = [];       // 포함 매칭용(긴 품번 우선)
-let excluded = [];         // D열(단량)이 없어 빠진 품번과 이유
-let current = null;        // 선택된 자재
+let items = [];
+let itemsByLen = [];
+let excluded = [];
+let current = null;
 let recent = [];
+let viewMode = 'log';
 let suggestions = [];
 let activeSuggest = -1;
+let lastBackPress = 0;
+
+function setViewMode(mode) {
+  viewMode = mode;
+  $('tabLog').classList.toggle('active', mode === 'log');$('tabSum').classList.toggle('active', mode === 'summary');
+  renderRecent();
+}
+
+/* ════════ 스마트폰 뒤로가기 창 꺼짐 방지 ════════ */
+function initBackGuard() {
+  try {
+    history.pushState({ guard: 1 }, '', location.href);
+    window.addEventListener('popstate', () => {
+      if (!$('suggest').hidden) {$('suggest').hidden = true;
+        $('search').blur();
+        history.pushState({ guard: 1 }, '', location.href);
+        return;
+      }
+      if (current) {
+        cancelPick();
+        history.pushState({ guard: 1 }, '', location.href);
+        return;
+      }
+      const now = Date.now();
+      if (now - lastBackPress > 2000) {
+        lastBackPress = now;
+        toast('뒤로가기를 한 번 더 누르면 앱이 닫힙니다.');
+        history.pushState({ guard: 1 }, '', location.href);
+      }
+    });
+  } catch (e) {}
+}
 
 /* ════════ 서버 통신 ════════ */
 async function call(method, payload) {
@@ -327,13 +403,13 @@ async function call(method, payload) {
       ? await fetch(API_URL + '?' + new URLSearchParams(body), { signal: ctl.signal })
       : await fetch(API_URL, {
           method: 'POST',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },  // 사전 요청(CORS preflight) 없이 전송
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
           body: JSON.stringify(body),
           signal: ctl.signal
         });
     let data;
     try { data = await res.json(); }
-    catch (e) { throw new Error('시트 응답을 읽지 못했습니다. 웹앱 액세스 권한이 "모든 사용자"인지 확인해주세요.'); }
+    catch (e) { throw new Error('시트 응답을 읽지 못했습니다. 웹앱 배포 버전을 확인해주세요.'); }
     if (!data.ok) throw new Error(data.error || '서버 오류');
     return data;
   } catch (e) {
@@ -345,46 +421,23 @@ async function call(method, payload) {
   }
 }
 
-const api = DEMO ? demoApi() : {
+const api = {
   boot: () => call('GET', { action: 'boot' }),
-  save: (req) => call('POST', { action: 'save', reqId: req.reqId, code: req.code, pallets: req.pallets, loose: req.loose })
+  save: (req) => call('POST', {
+    action: 'save',
+    reqId: req.reqId,
+    code: req.code,
+    pallets: req.pallets,
+    loose: req.loose,
+    note: req.note
+  })
 };
 
-// 데모용 예시 자재(실제 시트 값 아님)
-function demoApi() {
-  const master = [
-    ['41320118', '데모 자재 A', 12], ['41320120', '데모 자재 B', 24], ['41110004', '데모 펄프 NB416(527mm)', 8],
-    ['41110007', '데모 보강지 30g(60mm)', 40], ['41110012', '데모 티슈 14g(170mm)', 16]
-  ].map(([code, name, unit]) => ({ code, name, unit }));
-  const sheet = {};
-  const wait = (ms) => new Promise((r) => setTimeout(r, ms));
-  const pad = (n) => String(n).padStart(2, '0');
-  return {
-    boot: async () => { await wait(300); return { items: master, excluded: [{ code: '41320113', name: '데모 자재 (단량 없음)', reason: 'D열(단량) 비어 있음', row: 9 }], recent: [] }; },
-    save: async (req) => {
-      await wait(500);
-      const it = master.find((m) => m.code === req.code);
-      if (!it) throw new Error(NOT_MANAGED);
-      const c = calc(it.unit, req.pallets, req.loose);
-      const prev = sheet[req.code];
-      const now = new Date();
-      sheet[req.code] = {
-        code: it.code, name: it.name, unit: it.unit,
-        qty: round(c.total + (prev ? prev.qty : 0)), added: c.total, formula: c.sheet,
-        history: prev ? prev.history + ' / ' + c.sheet : c.sheet, merged: !!prev,
-        time: pad(now.getMonth() + 1) + '.' + pad(now.getDate()) + ' ' + pad(now.getHours()) + ':' + pad(now.getMinutes()),
-        ts: now.getTime()
-      };
-      return { record: sheet[req.code] };
-    }
-  };
-}
-
 async function boot() {
-  $('itemCode').textContent = '백데이터 불러오는 중';
+  $('itemCode').textContent = '백데이터 불러오는 중...';
   try {
     const data = await api.boot();
-    items = data.items || [];
+    items = (data.items || []).map((it) => Object.assign({}, it, { looseMult: getLooseMult(it) }));
     excluded = data.excluded || [];
     itemsByLen = items.slice().sort((a, b) => b.code.length - a.code.length);
     recent = (data.recent || []).map((r) => Object.assign({ state: 'done' }, r));
@@ -399,59 +452,60 @@ async function boot() {
   }
 }
 
-/* ════════ 계산 ════════
-   총수량 = 단량 × 파렛트 + 잔량 */
+/* ════════ 계산: 총수량 = (잔량 × 잔량배수) + (파렛트 × 파렛트단량) ════════ */
 function round(n) { return Math.round(n * 10000) / 10000; }
 
-function calc(unit, palletsRaw, looseRaw) {
+function calc(unit, lMult, palletsRaw, looseRaw, noteRaw) {
   const pS = String(palletsRaw == null ? '' : palletsRaw).trim();
   const lS = String(looseRaw == null ? '' : looseRaw).trim().replace(',', '.');
+  const noteS = String(noteRaw == null ? '' : noteRaw).trim();
   const p = pS === '' ? null : Number(pS);
   const l = lS === '' ? null : Number(lS);
   const badP = p !== null && !(Number.isInteger(p) && p >= 0);
   const badL = l !== null && !(isFinite(l) && l >= 0);
   if (badP || badL) return { error: badP ? '파렛트 수는 0 이상의 정수로 입력해주세요.' : '잔량은 0 이상의 숫자로 입력해주세요.', badP, badL };
-  if (p === null && l === null) return { empty: true };
+  if (p === null && l === null && !noteS) return { empty: true };
 
-  const total = round((p || 0) * unit + (l || 0));
+  const looseQty = round((l || 0) * lMult);
+  const palletQty = round((p || 0) * unit);
+  const total = round(looseQty + palletQty);
   const n = (x) => String(round(x));
-  let screen, sheet;
-  if (p !== null && l !== null) { screen = n(unit) + ' × ' + n(p) + ' + ' + n(l); sheet = n(unit) + '*' + n(p) + '+' + n(l); }
-  else if (p !== null) { screen = n(unit) + ' × ' + n(p); sheet = n(unit) + '*' + n(p); }
-  else { screen = '낱개 ' + n(l); sheet = '낱개 ' + n(l); }
-  return { total, screen, sheet, pallets: p, loose: l };
+
+  const screenParts = [];
+  if (l !== null && l > 0) {
+    screenParts.push(lMult > 1 ? '잔량(' + n(lMult) + '×' + n(l) + ')' : '낱개 ' + n(l));
+  }
+  if (p !== null && p > 0) {
+    screenParts.push(n(unit) + '×' + n(p));
+  }
+  const screen = screenParts.length ? screenParts.join(' + ') : (noteS ? '메모만 저장' : '0');
+  return { total, screen, pallets: p, loose: l, note: noteS };
 }
 
 function updateCalc() {
   const btn = $('save');
-  $('palletField').classList.remove('bad');
-  $('looseField').classList.remove('bad');
+  $('palletField').classList.remove('bad');$('looseField').classList.remove('bad');
   if (!current) {
     btn.disabled = true; btn.classList.add('solo');
-    $('calcText').textContent = '';
-    $('saveLabel').textContent = '자재를 선택하세요';
+    $('calcText').textContent = '';$('saveLabel').textContent = '자재를 선택하세요';
     return null;
   }
-  const c = calc(current.unit, $('pallets').value, $('loose').value);
+  const c = calc(current.unit, current.looseMult || 1, $('pallets').value, $('loose').value, $('note').value);
   if (c.error) {
     if (c.badP) $('palletField').classList.add('bad');
     if (c.badL) $('looseField').classList.add('bad');
     btn.disabled = true; btn.classList.add('solo');
-    $('calcText').textContent = '';
-    $('saveLabel').textContent = '숫자를 확인하세요';
+    $('calcText').textContent = '';$('saveLabel').textContent = '숫자를 확인하세요';
     return null;
   }
   if (c.empty) {
     btn.disabled = true; btn.classList.add('solo');
-    $('calcText').textContent = '';
-    $('saveLabel').textContent = '수량을 입력하세요';
+    $('calcText').textContent = '';$('saveLabel').textContent = '잔량 또는 파렛트를 입력하세요';
     return null;
   }
   btn.disabled = false;
   btn.classList.remove('solo');
-  // 낱개만 입력하면 '낱개 5'가 곧 총수량이므로 '= 5'를 덧붙이지 않음
-  $('calcText').textContent = c.pallets === null ? c.screen : c.screen + ' = ' + fmt(c.total);
-  $('saveLabel').textContent = fmt(c.total) + '개 저장';
+  $('calcText').textContent = c.screen + ' = ' + fmt(c.total);$('saveLabel').textContent = fmt(c.total) + '개 저장';
   return c;
 }
 
@@ -459,390 +513,4 @@ function updateCalc() {
 let scanner = null;
 let holding = false;
 let camLive = false;
-let last = { code: '', t: 0 };
-
-function startScanner() {
-  $('camError').hidden = true;
-  if (!window.isSecureContext) return camFail('카메라는 https 주소에서만 켜집니다.');
-  if (typeof Html5Qrcode === 'undefined') return camFail('스캐너를 불러오지 못했습니다. 인터넷 연결을 확인해주세요.');
-  setCam('카메라 연결 중', '');
-
-  if (!scanner) {
-    const F = Html5QrcodeSupportedFormats;
-    scanner = new Html5Qrcode('reader', {
-      verbose: false,
-      formatsToSupport: [F.CODE_128, F.CODE_39, F.CODE_93, F.EAN_13, F.EAN_8, F.ITF, F.UPC_A, F.QR_CODE, F.DATA_MATRIX],
-      experimentalFeatures: { useBarCodeDetectorIfSupported: true }
-    });
-  }
-  scanner.start({ facingMode: 'environment' }, { fps: 12, disableFlip: true }, onDecode, () => {})
-    .then(() => { camLive = true; setCam('스캔 중', 'live'); if (holding) hold(); })
-    .catch((err) => camFail(cameraMessage(err)));
-}
-
-function cameraMessage(err) {
-  const s = String((err && (err.name || err.message)) || err);
-  if (/NotAllowed|Permission/i.test(s)) return '카메라 권한이 꺼져 있습니다. 브라우저 설정에서 이 사이트의 카메라를 허용한 뒤 다시 시도해주세요.';
-  if (/NotFound|Overconstrained/i.test(s)) return '사용할 수 있는 후면 카메라를 찾지 못했습니다.';
-  if (/NotReadable|TrackStart/i.test(s)) return '다른 앱이 카메라를 사용 중입니다. 그 앱을 닫고 다시 시도해주세요.';
-  return '카메라를 켜지 못했습니다.';
-}
-
-function camFail(msg) {
-  camLive = false;
-  setCam('카메라 꺼짐', 'off');
-  $('camErrorText').textContent = msg;
-  $('camError').hidden = false;
-}
-
-function setCam(text, state) {
-  $('camText').textContent = text;
-  $('camState').className = 'cam-state' + (state ? ' ' + state : '');
-}
-
-function onDecode(text) {
-  const code = String(text).trim();
-  const now = Date.now();
-  // 같은 바코드가 1.5초 안에 다시 읽히면 무시(화면에 계속 비치는 동안은 계속 무시)
-  if (code === last.code && now - last.t < DEDUPE_MS) { last.t = now; return; }
-  last = { code, t: now };
-  if (holding || !code) return;
-
-  const item = matchItem(code);
-  if (item) pick(item, 'scan');
-  else rejectScan(code);
-}
-
-function matchItem(raw) {
-  return items.find((m) => m.code === raw) ||
-         itemsByLen.find((m) => m.code.length >= 4 && raw.indexOf(m.code) > -1) || null;
-}
-
-// 관리 대상이 아닌 바코드: 안내만 하고 스캔은 계속
-let rejectTimer = null;
-function rejectScan(code) {
-  beep(true);
-  current = null;
-  $('item').className = 'item reject';
-  const ex = excluded.find((m) => m.code === code) ||
-             excluded.slice().sort((a, b) => b.code.length - a.code.length).find((m) => m.code.length >= 4 && code.indexOf(m.code) > -1);
-  const shown = code.length > 40 ? code.slice(0, 40) + '…' : code;
-  $('itemCode').textContent = ex ? ex.code + ' · ' + ex.reason + (ex.row ? ' (' + ex.row + '행)' : '') : shown + ' · 단량 탭에 없는 품번';
-  $('itemUnit').hidden = true;
-  $('itemName').textContent = NOT_MANAGED;
-  setInputsEnabled(false);
-  updateCalc();
-  $('cam').classList.add('reject');
-  clearTimeout(rejectTimer);
-  rejectTimer = setTimeout(() => $('cam').classList.remove('reject'), 900);
-}
-
-// 자재가 잡히면 저장/취소 전까지 스캔을 멈춰 다른 바코드가 끼어들지 않게 함
-function hold() {
-  holding = true;
-  try { if (scanner && scanner.getState() === Html5QrcodeScannerState.SCANNING) scanner.pause(true); } catch (e) {}
-  if (!camLive) return;
-  $('cam').classList.add('caught');
-  $('camHold').hidden = false;
-  setCam('일시 정지', '');
-}
-
-function release() {
-  holding = false;
-  last.t = Date.now();
-  try { if (scanner && scanner.getState() === Html5QrcodeScannerState.PAUSED) scanner.resume(); } catch (e) {}
-  $('cam').classList.remove('caught');
-  $('camHold').hidden = true;
-  if (camLive) setCam('스캔 중', 'live');
-}
-
-/* ════════ 자재 선택 · 저장 ════════ */
-function setInputsEnabled(on) {
-  ['pallets', 'loose'].forEach((id) => { $(id).disabled = !on; if (!on) $(id).value = ''; });
-}
-
-function pick(item, source) {
-  current = item;
-  $('item').className = 'item';
-  $('itemCode').textContent = item.code;
-  $('itemUnit').textContent = '1파렛트 = ' + fmt(item.unit) + '개';
-  $('itemUnit').hidden = false;
-  $('itemName').textContent = item.name || '(품명 없음)';
-  setInputsEnabled(true);
-  $('pallets').value = '';
-  $('loose').value = '';
-  updateCalc();
-  if (source === 'scan') beep();
-  hold();
-  $('pallets').focus({ preventScroll: true });
-}
-
-function setIdle() {
-  current = null;
-  $('item').className = 'item idle';
-  $('itemCode').textContent = DEMO ? '데모 모드 · 시트 미연결' : '관리 자재 ' + items.length + '개';
-  $('itemUnit').hidden = true;
-  $('itemName').textContent = '바코드를 비추거나 검색하세요';
-  setInputsEnabled(false);
-  updateCalc();
-}
-
-function cancelPick() {
-  document.activeElement && document.activeElement.blur();
-  setIdle();
-  release();
-}
-
-function save() {
-  if (!current) return toast('자재를 먼저 스캔하거나 검색해주세요.');
-  const c = updateCalc();
-  if (!c) {
-    const e = calc(current.unit, $('pallets').value, $('loose').value);
-    return toast(e.error || '파렛트 수나 잔량을 입력해주세요.');
-  }
-  const req = {
-    reqId: Date.now().toString(36) + Math.random().toString(36).slice(2, 8),
-    code: current.code,
-    name: current.name,
-    pallets: c.pallets === null ? '' : c.pallets,
-    loose: c.loose === null ? '' : c.loose,
-    added: c.total,
-    formula: c.screen,
-    state: 'pending'
-  };
-  recent.unshift(req);
-  document.activeElement && document.activeElement.blur();
-  setIdle();
-  release();
-  send(req);
-}
-
-async function send(req) {
-  req.state = 'pending';
-  renderRecent(); renderMeta();
-  try {
-    const data = await api.save(req);
-    const rec = Object.assign({ state: 'done', fresh: true }, data.record);
-    recent = recent.filter((r) => r !== req && !(r.state === 'done' && r.code === rec.code));
-    recent.unshift(rec);
-    recent = recent.slice(0, 30);
-  } catch (e) {
-    req.state = 'failed';
-    req.error = e.message;
-    toast(/관리 대상/.test(e.message) ? e.message : '저장하지 못했습니다. 해당 줄을 누르면 다시 보냅니다.');
-  }
-  renderRecent(); renderMeta();
-}
-
-/* ════════ 검색 ════════ */
-const norm = (s) => String(s).toLowerCase().replace(/\s+/g, '');
-
-function runSearch(q) {
-  const k = norm(q);
-  if (!k) return items.slice();
-  const starts = [], ends = [], inCode = [], inName = [];
-  items.forEach((m) => {
-    if (m.code.startsWith(k)) starts.push(m);          // 41 → 41로 시작하는 품번
-    else if (m.code.endsWith(k)) ends.push(m);         // 0004 → 뒷자리가 0004
-    else if (m.code.indexOf(k) > -1) inCode.push(m);   // 4 → 품번 어딘가에 4
-    else if (norm(m.name).indexOf(k) > -1) inName.push(m);
-  });
-  const byCode = (a, b) => a.code.localeCompare(b.code);
-  return starts.sort(byCode).concat(ends.sort(byCode), inCode.sort(byCode), inName);
-}
-
-function excludedMatches(q) {
-  const k = norm(q);
-  if (k.length < 3) return [];
-  return excluded.filter((m) => m.code.indexOf(k) > -1 || norm(m.name).indexOf(k) > -1).slice(0, 5);
-}
-
-function hl(text, q) {
-  const k = String(q).trim();
-  const t = String(text);
-  const i = k ? t.toLowerCase().indexOf(k.toLowerCase()) : -1;
-  if (i < 0) return esc(t);
-  return esc(t.slice(0, i)) + '<mark>' + esc(t.slice(i, i + k.length)) + '</mark>' + esc(t.slice(i + k.length));
-}
-
-function renderSuggest() {
-  const box = $('suggest');
-  const q = $('search').value.trim();
-  const all = runSearch(q);
-  const LIMIT = 100;
-  suggestions = all.slice(0, LIMIT);
-  activeSuggest = q && suggestions.length ? 0 : -1;
-  const ex = excludedMatches(q);
-
-  let html = '';
-  if (!items.length) {
-    html = '<li class="empty">관리 자재 목록을 불러오지 못했습니다</li>';
-  } else if (!suggestions.length && !ex.length) {
-    html = '<li class="empty">일치하는 관리 자재가 없습니다</li>';
-  } else {
-    html = suggestions.map((m, i) =>
-      '<li><button type="button" data-i="' + i + '"' + (i === activeSuggest ? ' class="on"' : '') + '>' +
-        '<span class="s-code">[' + hl(m.code, q) + ']</span>' +
-        '<span class="s-name">' + hl(m.name, q) + '</span>' +
-        '<span class="s-unit">(단량: ' + fmt(m.unit) + ')</span>' +
-      '</button></li>').join('');
-    if (all.length > LIMIT) html += '<li class="more">' + (all.length - LIMIT) + '개 더 있음 · 검색어를 더 입력하세요</li>';
-  }
-  // 시트에는 있지만 D열(단량)이 없어 빠진 품번은 이유와 함께 회색으로 보여줌(선택 불가)
-  html += ex.map((m) =>
-    '<li class="excl"><b>[' + hl(m.code, q) + ']</b> ' + esc(m.name) +
-    '<small>관리 대상 아님 · ' + esc(m.reason) + (m.row ? ' (단량 탭 ' + m.row + '행)' : '') + '</small></li>').join('');
-
-  box.innerHTML = html;
-  box.hidden = false;
-  box.scrollTop = 0;
-}
-
-function chooseSuggest(i) {
-  const m = suggestions[i];
-  if (!m) return;
-  $('search').value = '';
-  $('suggest').hidden = true;
-  $('search').blur();
-  pick(m, 'search');
-}
-
-/* ════════ 렌더링 ════════ */
-function renderRecent() {
-  const list = $('list');
-  if (!recent.length) {
-    list.innerHTML = '<li class="empty">아직 입력한 내역이 없습니다</li>';
-    return;
-  }
-  list.innerHTML = recent.map((r, i) => {
-    let sub, qtyMain, qtySub = '';
-    if (r.state === 'pending') {
-      sub = esc(r.code) + ' · ' + esc(r.formula) + ' · 저장 중';
-      qtyMain = '+' + fmt(r.added);
-    } else if (r.state === 'failed') {
-      sub = esc(r.error && /관리 대상/.test(r.error) ? r.error : '저장 실패 · 눌러서 다시 보내기');
-      qtyMain = '+' + fmt(r.added);
-    } else {
-      sub = esc(r.code) + (r.history ? ' · ' + esc(String(r.history).replace(/\*/g, '×')) : '');
-      qtyMain = fmt(r.qty);
-      if (r.merged && r.added !== undefined) qtySub = '+' + fmt(r.added);
-    }
-    return '<li class="row ' + r.state + (r.fresh ? ' fresh' : '') + '" data-i="' + i + '">' +
-             '<div class="row-main"><p class="row-name">' + esc(r.name || r.code) + '</p><p class="row-sub">' + sub + '</p></div>' +
-             '<div class="row-qty"><b>' + qtyMain + '</b>' + (qtySub ? '<span>' + qtySub + '</span>' : '') + '</div>' +
-           '</li>';
-  }).join('');
-  recent.forEach((r) => { r.fresh = false; });
-}
-
-function renderMeta() {
-  const pending = recent.filter((r) => r.state === 'pending').length;
-  const failed = recent.filter((r) => r.state === 'failed').length;
-  const meta = $('recentMeta');
-  if (failed) meta.textContent = '실패 ' + failed + '건';
-  else if (pending) meta.textContent = '전송 중 ' + pending + '건';
-  else meta.textContent = DEMO ? '데모 · 시트에 기록되지 않음' : '시트에 바로 기록됩니다';
-}
-
-function fmt(n) {
-  return Number(n).toLocaleString('ko-KR', { maximumFractionDigits: 4 });
-}
-
-function esc(s) {
-  return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-}
-
-let toastTimer = null;
-function toast(msg) {
-  const t = $('toast');
-  t.textContent = msg;
-  t.hidden = false;
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => { t.hidden = true; }, 3000);
-}
-
-/* ════════ 소리 · 진동 ════════ */
-let actx = null;
-function beep(low) {
-  try {
-    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
-    if (actx.state === 'suspended') actx.resume();
-    const o = actx.createOscillator(), g = actx.createGain(), t = actx.currentTime;
-    o.frequency.value = low ? 420 : 1400;
-    g.gain.setValueAtTime(0.12, t);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + (low ? 0.22 : 0.09));
-    o.connect(g); g.connect(actx.destination);
-    o.start(t); o.stop(t + (low ? 0.23 : 0.1));
-  } catch (e) {}
-  if (navigator.vibrate) navigator.vibrate(low ? [80, 60, 80] : 60);
-}
-// iOS는 첫 터치 이후에만 소리가 나므로 첫 터치 때 오디오를 깨워 둠
-document.addEventListener('pointerdown', () => {
-  try { actx = actx || new (window.AudioContext || window.webkitAudioContext)(); actx.resume(); } catch (e) {}
-}, { once: true });
-
-/* ════════ 이벤트 ════════ */
-$('pallets').addEventListener('input', updateCalc);
-$('loose').addEventListener('input', updateCalc);
-$('pallets').addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') { e.preventDefault(); $('loose').focus(); }
-  if (e.key === 'Escape') cancelPick();
-});
-$('loose').addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') { e.preventDefault(); save(); }
-  if (e.key === 'Escape') cancelPick();
-});
-$('save').addEventListener('click', save);
-$('camHold').addEventListener('click', cancelPick);
-$('camRetry').addEventListener('click', startScanner);
-
-$('search').addEventListener('focus', renderSuggest);
-$('search').addEventListener('input', renderSuggest);
-$('search').addEventListener('keydown', (e) => {
-  const box = $('suggest');
-  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-    if (!suggestions.length) return;
-    e.preventDefault();
-    activeSuggest = (activeSuggest + (e.key === 'ArrowDown' ? 1 : -1) + suggestions.length) % suggestions.length;
-    box.querySelectorAll('button').forEach((b, i) => b.classList.toggle('on', i === activeSuggest));
-  } else if (e.key === 'Enter') {
-    e.preventDefault();
-    if (activeSuggest > -1) chooseSuggest(activeSuggest);
-    else if (suggestions.length === 1) chooseSuggest(0);
-  } else if (e.key === 'Escape') {
-    box.hidden = true;
-    $('search').blur();
-  }
-});
-$('suggest').addEventListener('click', (e) => {
-  const b = e.target.closest('button[data-i]');
-  if (b) chooseSuggest(+b.dataset.i);
-});
-document.addEventListener('pointerdown', (e) => {
-  if (!e.target.closest('.search')) $('suggest').hidden = true;
-});
-
-$('list').addEventListener('click', (e) => {
-  const row = e.target.closest('.row.failed');
-  if (!row) return;
-  const r = recent[+row.dataset.i];
-  if (r) send(r);
-});
-
-// 화면을 벗어났다 돌아오면 카메라 상태 복구
-document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState !== 'visible' || !scanner) return;
-  try {
-    if (scanner.getState() === Html5QrcodeScannerState.NOT_STARTED) startScanner();
-  } catch (e) {}
-});
-
-/* ════════ 시작 ════════ */
-setIdle();
-renderRecent();
-renderMeta();
-boot();
-startScanner();
-</script>
-</body>
-</html>
+let last = { code
