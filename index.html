@@ -6,8 +6,8 @@
   <meta name="theme-color" content="#0f172a">
   <title>자재 재고실사</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+  <!-- iOS 등 BarcodeDetector 미지원 브라우저용 보조 엔진 -->
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js" defer></script>
   <style>
     :root {
       --bg: #f1f5f9;
@@ -22,9 +22,9 @@
       --field-border: #cbd5e1;
       --accent: #2563eb;
       --accent-soft: #dbeafe;
-      --amber: #f59e0b;
+      --emerald: #10b981;
       --danger: #ef4444;
-      --radius-lg: 18px;
+      --radius-lg: 16px;
       --radius-md: 12px;
     }
 
@@ -45,7 +45,7 @@
       max-width: 500px; margin: 0 auto; padding-bottom: 24px;
     }
 
-    /* ── 심플 상단 헤더 (작업자 & 시트 새로고침만 배치) ── */
+    /* ── 상단 헤더 ── */
     .console-header {
       background: var(--header-bg); color: #fff;
       padding: calc(10px + env(safe-area-inset-top, 0px)) 16px 12px;
@@ -62,65 +62,59 @@
     .h-btn:active { opacity: 0.8; }
     .h-btn.worker-active { background: var(--accent); }
 
-    /* ── 무버튼 스마트 카메라 뷰파인더 ── */
+    /* ── 카메라 뷰파인더 (가짜 애니메이션 제거 · 화면 전체 1:1 스캔) ── */
     .cam-card {
       margin: 12px 14px 0;
       border-radius: var(--radius-lg);
+      border: 3px solid #1e293b;
       box-shadow: var(--card-shadow);
-      overflow: hidden; background: #090d16;
+      overflow: hidden; background: #000;
       position: relative;
-      height: clamp(155px, 24dvh, 215px);
-      transition: height 0.2s ease;
+      height: clamp(160px, 25dvh, 220px);
+      transition: height 0.15s ease, border-color 0.15s ease;
       cursor: pointer;
     }
-    .app.picking .cam-card { height: 42px !important; }
-    .app.picking .hud-frame, .app.picking .cam-status, .app.picking #reader { opacity: 0; pointer-events: none; }
+    /* 바코드 인식 순간 초록색 테두리 피드백 */
+    .cam-card.hit { border-color: var(--emerald); box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.25); }
+    .cam-card.reject { border-color: var(--danger); }
+
+    /* 수량 입력 중일 때 키패드 가림 방지용 슬림 바 축소 */
+    .app.picking .cam-card { height: 42px !important; border-color: #334155; }
+    .app.picking #camVideo, .app.picking #fallbackReader, .app.picking .aim-line, .app.picking .cam-status {
+      opacity: 0; pointer-events: none;
+    }
     .app.picking .search-wrap { display: none; }
 
-    #reader { position: absolute; inset: 0; transform-origin: center center; }
-    #reader video { display: block; width: 100% !important; height: 100% !important; object-fit: cover; }
-    #reader > div, #reader canvas { display: none !important; }
+    #camVideo {
+      position: absolute; inset: 0;
+      width: 100%; height: 100%;
+      object-fit: cover; display: block;
+    }
+    #fallbackReader { position: absolute; inset: 0; }
+    #fallbackReader video { width: 100% !important; height: 100% !important; object-fit: cover; }
+    #fallbackReader > div, #fallbackReader canvas { display: none !important; }
 
-    .hud-frame {
+    /* 시선 고정용 아주 얇은 정적 중앙 가이드선 1개만 표시 */
+    .aim-line {
       position: absolute; z-index: 2;
-      left: 11%; right: 11%; top: 22%; bottom: 24%;
+      left: 10%; right: 10%; top: 50%; height: 1px;
+      background: rgba(255, 255, 255, 0.35);
       pointer-events: none;
-    }
-    .hud-corner {
-      position: absolute; width: 18px; height: 18px;
-      border-color: #38bdf8; border-style: solid; border-width: 0;
-      transition: border-color 0.2s;
-    }
-    .cam-card.torch-active .hud-corner { border-color: #fbbf24; }
-    .hud-corner.tl { top: 0; left: 0; border-top-width: 3px; border-left-width: 3px; border-top-left-radius: 6px; }
-    .hud-corner.tr { top: 0; right: 0; border-top-width: 3px; border-right-width: 3px; border-top-right-radius: 6px; }
-    .hud-corner.bl { bottom: 0; left: 0; border-bottom-width: 3px; border-left-width: 3px; border-bottom-left-radius: 6px; }
-    .hud-corner.br { bottom: 0; right: 0; border-bottom-width: 3px; border-right-width: 3px; border-bottom-right-radius: 6px; }
-
-    .laser-beam {
-      position: absolute; left: 4%; right: 4%; height: 2px;
-      background: linear-gradient(90deg, transparent, #ef4444, #fca5a5, #ef4444, transparent);
-      box-shadow: 0 0 10px 2px rgba(239, 68, 68, 0.85);
-      animation: scanLaser 1.8s ease-in-out infinite;
-    }
-    @keyframes scanLaser {
-      0%, 100% { top: 15%; opacity: 0.7; }
-      50% { top: 85%; opacity: 1; }
     }
 
     .cam-status {
-      position: absolute; z-index: 3; left: 12px; right: 12px; bottom: 8px;
+      position: absolute; z-index: 3; left: 10px; right: 10px; bottom: 8px;
       display: flex; justify-content: space-between; align-items: center;
       pointer-events: none;
     }
     .status-pill {
       display: inline-flex; align-items: center; gap: 6px;
       padding: 4px 10px; border-radius: 999px;
-      background: rgba(9, 13, 22, 0.78); backdrop-filter: blur(4px);
-      font-size: 11px; font-weight: 700; color: #e2e8f0;
+      background: rgba(15, 23, 42, 0.75);
+      font-size: 11px; font-weight: 700; color: #f8fafc;
     }
-    .led { width: 7px; height: 7px; border-radius: 50%; background: #10b981; box-shadow: 0 0 6px #10b981; }
-    .led.torch { background: #fbbf24; box-shadow: 0 0 8px #fbbf24; }
+    .led { width: 7px; height: 7px; border-radius: 50%; background: var(--emerald); }
+    .led.torch { background: #fbbf24; }
 
     .cam-overlay-btn {
       position: absolute; z-index: 6; inset: 0; width: 100%;
@@ -130,7 +124,7 @@
     }
     .cam-overlay-btn small { font-size: 11px; color: #94a3b8; font-weight: 500; }
 
-    /* ── 메인 작업 패널 카드 ── */
+    /* ── 메인 작업 패널 ── */
     .work-card {
       margin: 10px 14px 0; padding: 14px;
       background: var(--card); border: 1.5px solid var(--card-border);
@@ -197,7 +191,7 @@
       display: flex; flex-direction: column; gap: 4px;
       padding: 9px 12px; border-radius: var(--radius-md);
       background: var(--fill); border: 1.5px solid var(--field-border);
-      cursor: text; transition: all 0.15s;
+      cursor: text;
     }
     .slot:focus-within {
       border-color: var(--accent); background: #ffffff;
@@ -280,7 +274,6 @@
 <body>
 
 <main class="app" id="app">
-  <!-- 상단 헤더 (군더더기 없이 작업자 & 시트 새로고침만 유지) -->
   <header class="console-header">
     <div class="brand">
       <svg class="px" width="20" height="20" viewBox="0 0 16 16">
@@ -301,22 +294,17 @@
         </svg>
         <span id="workerText">작업자 입력</span>
       </button>
-      <button type="button" class="h-btn" id="syncBtn" title="시트 데이터 새로고침">🔄 동기화</button>
+      <button type="button" class="h-btn" id="syncBtn">🔄 동기화</button>
     </div>
   </header>
 
-  <!-- 무버튼 올인원 카메라 (FHD + 1.4x 자동줌 + 바코드/품번OCR 하이브리드 + 조도감지/터치 조명) -->
-  <section class="cam-card" id="cam" title="화면을 탭하면 조명이 켜지거나 꺼집니다">
-    <div id="reader"></div>
-    <div class="hud-frame">
-      <div class="hud-corner tl"></div>
-      <div class="hud-corner tr"></div>
-      <div class="hud-corner bl"></div>
-      <div class="hud-corner br"></div>
-      <div class="laser-beam"></div>
-    </div>
+  <!-- 카메라 창 (보이는 화면 100% 그대로 초고속 스캔 · 탭하면 조명 켜짐/꺼짐) -->
+  <section class="cam-card" id="cam">
+    <video id="camVideo" playsinline muted autoplay></video>
+    <div id="fallbackReader" hidden></div>
+    <div class="aim-line"></div>
     <div class="cam-status">
-      <span class="status-pill"><span class="led" id="camLed"></span><span id="camText">바코드 + 품번글자 동시 스캔 중</span></span>
+      <span class="status-pill"><span class="led" id="camLed"></span><span id="camText">스캔 준비 중...</span></span>
       <span class="status-pill" id="camSubHint">화면 탭: 🔦조명</span>
     </div>
 
@@ -324,7 +312,7 @@
       <span>✕ 여기를 탭하거나 뒤로가기를 누르면 다시 스캔합니다</span>
     </button>
     <button type="button" class="cam-overlay-btn" id="camSleep" hidden>
-      <span>🔋 배터리 절약 대기 모드</span>
+      <span>🔋 절전 대기 모드 (카메라 꺼짐)</span>
       <small>화면을 탭하면 즉시 스캔이 다시 시작됩니다</small>
     </button>
   </section>
@@ -341,7 +329,6 @@
       <ul class="suggest" id="suggest" hidden></ul>
     </div>
 
-    <!-- 선택된 자재 모니터 -->
     <div class="item-monitor idle" id="item">
       <div class="item-top">
         <span class="item-code" id="itemCode">데이터 불러오는 중...</span>
@@ -350,10 +337,10 @@
           <span class="badge-pill" id="itemUnit" hidden></span>
         </div>
       </div>
-      <p class="item-name" id="itemName">바코드 또는 라벨의 품번 숫자를 비추세요</p>
+      <p class="item-name" id="itemName">카메라 창 안에 바코드가 들어오게 비추세요</p>
     </div>
 
-    <!-- 왼쪽: 잔량(롤/묶음) / 오른쪽: 파렛트 -->
+    <!-- 왼쪽: 잔량 / 오른쪽: 파렛트 -->
     <div class="counts-grid">
       <label class="slot" id="looseField">
         <div class="slot-head" id="looseHead">
@@ -380,7 +367,6 @@
       </label>
     </div>
 
-    <!-- 특이사항 입력 -->
     <div class="note-slot">
       <svg class="px" width="15" height="15" viewBox="0 0 16 16">
         <path fill="#f59e0b" d="M10 2h4v4h-4zM6 6h4v4H6zM2 10h4v4H2z"/>
@@ -412,8 +398,7 @@
 <script>
 const API_URL = 'https://script.google.com/macros/s/AKfycbyMrPtlVmS9tTHUDS5WrqNQp9LHZD1LKlKzhsRSkfuJNMENuswVDcSgni2GmwMXGkYz/exec';
 const API_KEY = 'dbslcka1!';
-const SLEEP_TIMEOUT_MS = 25000;
-const AUTO_ZOOM_LEVEL = 1.4; // 비닐 빛 반사 방지를 위한 최적 기본 배율(1.4x)
+const SLEEP_TIMEOUT_MS = 40000; // 40초간 미사용 시에만 카메라 하드웨어 전원 차단
 
 const DEFAULT_CODE_MULTS = {
   '41370026': 2, '42270010': 3, '41370067': 4,
@@ -470,231 +455,260 @@ function getLooseMult(item) {
   return 1;
 }
 
-/* ════════ 무버튼 올인원 스마트 비전 엔진 (FHD + 1.4x 줌 + 자동조명 + 백그라운드 OCR) ════════ */
-let scanner = null;
-let camRunning = false;
+/* ════════ 1:1 보이는 영역 직결 하드웨어 바코드 엔진 ════════
+   - 갤럭시 크롬: 내장 하드웨어 가속 BarcodeDetector로 화면에 보이는 영역(cropCanvas)을 초당 16회 직접 스캔
+   - 수량 입력 중에는 카메라 전원을 끄지 않고 일시정지(pause)만 하여 저장 직후 0.01초 만에 다음 스캔 재개 */
+let mediaStream = null;
+let nativeDetector = null;
+let fallbackScanner = null;
+let usingFallback = false;
+let camActive = false;
+let scanPaused = false;
+let scanTimer = null;
 let sleepTimer = null;
-let visionLoopTimer = null;
-let lastScan = { code: '', t: 0 };
 let torchOn = false;
-let manualTorchOverride = false;
-let ocrWorker = null;
-let ocrBusy = false;
+let lastScan = { code: '', t: 0 };
 
-function getActiveVideoTrack() {
-  const video = document.querySelector('#reader video');
-  if (!video || !video.srcObject) return null;
-  const tracks = video.srcObject.getVideoTracks();
-  return tracks && tracks.length ? tracks[0] : null;
-}
+const cropCanvas = document.createElement('canvas');
+const cropCtx = cropCanvas.getContext('2d', { willReadFrequently: true });
 
-// 카메라 하드웨어 조명(Torch) 제어 함수
-async function setTorch(on, isManual) {
-  const track = getActiveVideoTrack();
-  if (!track) return;
-  if (isManual) manualTorchOverride = true;
-  try {
-    await track.applyConstraints({ advanced: [{ torch: on }] });
-    torchOn = on;
-    $('cam').classList.toggle('torch-active', torchOn);
-    $('camLed').classList.toggle('torch', torchOn);
-    $('camSubHint').textContent = torchOn ? '🔦 조명 켜짐 (탭하여 끄기)' : '화면 탭: 🔦조명';
-    if (isManual) toast(torchOn ? '🔦 조명을 켰습니다 (비닐 반사 시 화면을 탭해 끄세요)' : '🔦 조명을 껐습니다');
-  } catch (e) {
-    if (isManual) toast('이 기기에서는 브라우저 조명 제어를 지원하지 않습니다.');
+function getVideoTrack() {
+  if (mediaStream) {
+    const tracks = mediaStream.getVideoTracks();
+    if (tracks && tracks.length) return tracks[0];
   }
+  const fVideo = document.querySelector('#fallbackReader video');
+  if (fVideo && fVideo.srcObject) {
+    const tracks = fVideo.srcObject.getVideoTracks();
+    if (tracks && tracks.length) return tracks[0];
+  }
+  return null;
 }
 
-// 버튼 없이 카메라 화면 아무 곳이나 탭하면 조명 켜기/끄기 토글
-$('cam').addEventListener('click', (e) => {
+// 화면 터치 시 조명(손전등) 즉시 토글
+$('cam').addEventListener('click', async (e) => {
   if (e.target.closest('#camHold') || e.target.closest('#camSleep')) return;
-  if (!camRunning || current) return;
+  if (!camActive || scanPaused) return;
   resetSleepTimer();
-  setTorch(!torchOn, true);
-});
-
-// 카메라 켜질 때 1.4배 스마트 줌 자동 적용 (비닐 반사 거리 확보)
-async function applySmartDefaultZoom() {
-  const track = getActiveVideoTrack();
-  let hwApplied = false;
-  if (track && track.getCapabilities) {
-    try {
-      const caps = track.getCapabilities();
-      if (caps.zoom && caps.zoom.max >= AUTO_ZOOM_LEVEL) {
-        await track.applyConstraints({ advanced: [{ zoom: AUTO_ZOOM_LEVEL }] });
-        hwApplied = true;
-      }
-    } catch (e) {}
-  }
-  $('reader').style.transform = hwApplied ? 'none' : 'scale(1.35)';
-}
-
-// 백그라운드 숫자 전용 OCR 워커 준비 (품번 8자리 숫자만 초고속으로 읽도록 제한)
-async function ensureOcrWorker() {
-  if (ocrWorker || typeof Tesseract === 'undefined') return ocrWorker;
+  const track = getVideoTrack();
+  if (!track) return;
   try {
-    const w = await Tesseract.createWorker('eng');
-    await w.setParameters({
-      tessedit_char_whitelist: '0123456789-'
-    });
-    ocrWorker = w;
-  } catch (e) {}
-  return ocrWorker;
-}
-
-// 1.4초마다 자동 실행되는 백그라운드 비전 루프 (① 어두운 곳 자동 조명 켜기 + ② 품목번호 숫자 자동 OCR)
-function startSmartVisionLoop() {
-  clearInterval(visionLoopTimer);
-  const canvas = document.createElement('canvas');
-  const ctx = canvas.getContext('2d', { willReadFrequently: true });
-
-  visionLoopTimer = setInterval(async () => {
-    if (!camRunning || current || ocrBusy || !items.length) return;
-    const video = document.querySelector('#reader video');
-    if (!video || !video.videoWidth) return;
-
-    ocrBusy = true;
-    try {
-      const vw = video.videoWidth;
-      const vh = video.videoHeight;
-      const sx = Math.floor(vw * 0.14);
-      const sy = Math.floor(vh * 0.28);
-      const sw = Math.floor(vw * 0.72);
-      const sh = Math.floor(vh * 0.44);
-
-      canvas.width = 480;
-      canvas.height = Math.max(120, Math.floor(480 * (sh / sw)));
-      ctx.drawImage(video, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
-
-      // 1. 조도(밝기) 자동 측정 및 비닐 반사 보정용 이진화(대비 극대화)
-      const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      const d = img.data;
-      let lumaSum = 0;
-      const pixelCount = d.length / 4;
-      for (let i = 0; i < d.length; i += 4) {
-        const luma = d[i] * 0.299 + d[i + 1] * 0.587 + d[i + 2] * 0.114;
-        lumaSum += luma;
-        // 글자 획을 선명하게 만들기 위해 대비(Contrast) 강화
-        const c = Math.max(0, Math.min(255, (luma - 128) * 1.55 + 128));
-        d[i] = d[i + 1] = d[i + 2] = c;
-      }
-      ctx.putImageData(img, 0, 0);
-
-      const avgLuma = lumaSum / pixelCount;
-      // 창고가 매우 어두우면(밝기 42 미만) 사용자가 수동으로 끄지 않은 이상 자동으로 조명을 켬
-      if (avgLuma < 42 && !torchOn && !manualTorchOverride) {
-        setTorch(true, false);
-      }
-
-      // 2. 바코드가 안 찍힐 때를 대비해 백그라운드에서 라벨 품목번호 숫자(8자리) 자동 판독
-      const worker = await ensureOcrWorker();
-      if (!worker || !camRunning || current) return;
-
-      const res = await worker.recognize(canvas);
-      const rawText = String((res && res.data && res.data.text) || '');
-      const cleanDigits = rawText.replace(/[^0-9]/g, ' ');
-
-      // 시트에 등록된 전체 품목번호(예: 41370027)와 정확히 일치하는 숫자가 라벨에 있으면 즉시 자동 선택!
-      const matched = itemsByLen.find((m) => m.code.length >= 6 && cleanDigits.indexOf(m.code) > -1);
-      if (matched && camRunning && !current) {
-        pick(matched, 'ocr');
-      }
-    } catch (e) {
-    } finally {
-      ocrBusy = false;
-    }
-  }, 1400);
-}
+    torchOn = !torchOn;
+    await track.applyConstraints({ advanced: [{ torch: torchOn }] });
+    $('camLed').classList.toggle('torch', torchOn);
+    $('camSubHint').textContent = torchOn ? '🔦 조명 켜짐 (탭: 끄기)' : '화면 탭: 🔦조명';
+  } catch (err) {
+    torchOn = false;
+    toast('이 기기에서는 브라우저 조명 제어를 지원하지 않습니다.');
+  }
+});
 
 function resetSleepTimer() {
   clearTimeout(sleepTimer);
-  if (camRunning && !current) {
-    sleepTimer = setTimeout(() => stopCameraHardware(true), SLEEP_TIMEOUT_MS);
+  if (camActive && !scanPaused) {
+    sleepTimer = setTimeout(() => stopCameraCompletely(), SLEEP_TIMEOUT_MS);
   }
 }
 
-async function startCameraHardware() {
-  if (camRunning || current) return;
+async function initNativeDetector() {
+  if (nativeDetector) return true;
+  if (!('BarcodeDetector' in window)) return false;
+  try {
+    const supported = await window.BarcodeDetector.getSupportedFormats();
+    const wanted = ['code_128', 'code_39', 'code_93', 'ean_13', 'ean_8', 'itf', 'upc_a', 'qr_code', 'data_matrix']
+      .filter((f) => supported.indexOf(f) > -1);
+    if (!wanted.length) return false;
+    nativeDetector = new window.BarcodeDetector({ formats: wanted });
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+async function startCamera() {
   $('camSleep').hidden = true;
   $('camHold').hidden = true;
-  $('camText').textContent = '고화질 스캐너 준비 중...';
 
-  if (!scanner) {
+  // 이미 카메라가 켜져 있고 일시정지(수량 입력 직후) 상태라면 0.01초 만에 즉시 재개!
+  if (camActive) {
+    scanPaused = false;
+    if (!usingFallback) {
+      try { await $('camVideo').play(); } catch (e) {}
+    } else if (fallbackScanner) {
+      try { fallbackScanner.resume(); } catch (e) {}
+    }
+    $('camText').textContent = '바코드에 갖다 대면 바로 찍힙니다';
+    resetSleepTimer();
+    return;
+  }
+
+  $('camText').textContent = '카메라 켜는 중...';
+  const hasNative = await initNativeDetector();
+
+  if (hasNative && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+    try {
+      mediaStream = await navigator.mediaDevices.getUserMedia({
+        audio: false,
+        video: {
+          facingMode: { ideal: 'environment' },
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        }
+      });
+      const video = $('camVideo');
+      video.srcObject = mediaStream;
+      await video.play();
+
+      // 연속 자동초점 및 1.25배 광학 줌(근접 초점 흐림 방지) 세팅
+      const track = getVideoTrack();
+      if (track && track.getCapabilities) {
+        try {
+          const caps = track.getCapabilities();
+          const adv = {};
+          if (caps.focusMode && caps.focusMode.indexOf('continuous') > -1) adv.focusMode = 'continuous';
+          if (caps.zoom && caps.zoom.max >= 1.25) adv.zoom = Math.min(caps.zoom.max, 1.25);
+          if (Object.keys(adv).length) await track.applyConstraints({ advanced: [adv] });
+        } catch (e) {}
+      }
+
+      usingFallback = false;
+      camActive = true;
+      scanPaused = false;
+      $('camText').textContent = '바코드에 갖다 대면 바로 찍힙니다';
+      startNativeScanLoop();
+      resetSleepTimer();
+      return;
+    } catch (e) {}
+  }
+
+  // 보조 스캐너 (iOS 사파리 등 BarcodeDetector 미지원 환경용)
+  startFallbackScanner();
+}
+
+function startNativeScanLoop() {
+  clearInterval(scanTimer);
+  let busy = false;
+
+  scanTimer = setInterval(async () => {
+    if (!camActive || scanPaused || busy || !nativeDetector) return;
+    const video = $('camVideo');
+    const camBox = $('cam');
+    const vw = video.videoWidth;
+    const vh = video.videoHeight;
+    const cw = camBox.clientWidth;
+    const ch = camBox.clientHeight;
+    if (!vw || !vh || !cw || !ch) return;
+
+    busy = true;
+    try {
+      // ★ 화면에 실제로 보이는 영역(object-fit: cover 기준)과 100% 동일한 좌표만 잘라내어 스캔!
+      const scale = Math.max(cw / vw, ch / vh);
+      const visW = Math.floor(cw / scale);
+      const visH = Math.floor(ch / scale);
+      const sx = Math.floor((vw - visW) / 2);
+      const sy = Math.floor((vh - visH) / 2);
+
+      cropCanvas.width = visW;
+      cropCanvas.height = visH;
+      cropCtx.drawImage(video, sx, sy, visW, visH, 0, 0, visW, visH);
+
+      const barcodes = await nativeDetector.detect(cropCanvas);
+      if (barcodes && barcodes.length > 0) {
+        const rawValue = String(barcodes[0].rawValue || '').trim();
+        if (rawValue) onDecode(rawValue);
+      }
+    } catch (e) {
+    } finally {
+      busy = false;
+    }
+  }, 60);
+}
+
+async function startFallbackScanner() {
+  usingFallback = true;
+  $('camVideo').hidden = true;
+  $('fallbackReader').hidden = false;
+
+  if (!fallbackScanner) {
     const F = Html5QrcodeSupportedFormats;
-    scanner = new Html5Qrcode('reader', {
+    fallbackScanner = new Html5Qrcode('fallbackReader', {
       verbose: false,
-      formatsToSupport: [F.CODE_128, F.CODE_39, F.CODE_93, F.EAN_13, F.EAN_8, F.ITF, F.UPC_A, F.QR_CODE, F.DATA_MATRIX],
-      experimentalFeatures: { useBarCodeDetectorIfSupported: true }
+      formatsToSupport: [F.CODE_128, F.CODE_39, F.CODE_93, F.EAN_13, F.EAN_8, F.ITF, F.UPC_A, F.QR_CODE, F.DATA_MATRIX]
     });
   }
   try {
-    await scanner.start(
+    await fallbackScanner.start(
       { facingMode: 'environment' },
-      {
-        fps: 12,
-        disableFlip: true,
-        qrbox: (vw, vh) => ({
-          width: Math.max(180, Math.floor(vw * 0.78)),
-          height: Math.max(80, Math.floor(vh * 0.50))
-        }),
-        videoConstraints: {
-          facingMode: 'environment',
-          width: { ideal: 1920 },
-          height: { ideal: 1080 },
-          focusMode: 'continuous'
-        }
-      },
+      { fps: 15, disableFlip: true },
       onDecode,
       () => {}
     );
-    camRunning = true;
-    torchOn = false;
-    manualTorchOverride = false;
-    $('cam').classList.remove('torch-active');
-    $('camLed').classList.remove('torch');
-    $('camText').textContent = '바코드 + 품번글자 자동 스캔 중';
-    $('camSubHint').textContent = '화면 탭: 🔦조명';
-
-    await applySmartDefaultZoom();
-    startSmartVisionLoop();
+    camActive = true;
+    scanPaused = false;
+    $('camText').textContent = '바코드에 갖다 대면 바로 찍힙니다';
     resetSleepTimer();
   } catch (e) {
-    camRunning = false;
+    camActive = false;
     $('camSleep').hidden = false;
   }
 }
 
-async function stopCameraHardware(isSleep) {
+// 수량 입력 중에는 카메라 전원을 끄지 않고 일시정지만 (저장 직후 0.01초 즉시 재개)
+function pauseCameraForInput() {
+  scanPaused = true;
   clearTimeout(sleepTimer);
-  clearInterval(visionLoopTimer);
-  torchOn = false;
-  $('cam').classList.remove('torch-active');
-  $('camLed').classList.remove('torch');
-  if (scanner && camRunning) {
-    try { await scanner.stop(); } catch (e) {}
+  if (!usingFallback) {
+    try { $('camVideo').pause(); } catch (e) {}
+  } else if (fallbackScanner) {
+    try { fallbackScanner.pause(true); } catch (e) {}
   }
-  camRunning = false;
-  if (isSleep && !current) $('camSleep').hidden = false;
 }
 
-$('camSleep').addEventListener('click', () => startCameraHardware());
+// 40초 이상 사용하지 않을 때만 카메라 하드웨어 완전 종료 (배터리 보호)
+async function stopCameraCompletely() {
+  clearTimeout(sleepTimer);
+  clearInterval(scanTimer);
+  torchOn = false;
+  $('camLed').classList.remove('torch');
+  $('camSubHint').textContent = '화면 탭: 🔦조명';
+
+  if (mediaStream) {
+    mediaStream.getTracks().forEach((t) => t.stop());
+    mediaStream = null;
+  }
+  if (usingFallback && fallbackScanner && camActive) {
+    try { await fallbackScanner.stop(); } catch (e) {}
+  }
+  camActive = false;
+  scanPaused = false;
+  if (!current) $('camSleep').hidden = false;
+}
+
+$('camSleep').addEventListener('click', () => startCamera());
 
 function onDecode(text) {
   const code = String(text).trim();
   const now = Date.now();
-  if (code === lastScan.code && now - lastScan.t < 1500) return;
+  if (code === lastScan.code && now - lastScan.t < 1200) return;
   lastScan = { code, t: now };
-  if (current || !code) return;
+  if (scanPaused || current || !code) return;
 
   const item = items.find((m) => m.code === code) ||
                itemsByLen.find((m) => m.code.length >= 4 && code.indexOf(m.code) > -1);
-  if (item) pick(item, 'scan');
-  else rejectScan(code);
+  if (item) {
+    $('cam').classList.add('hit');
+    setTimeout(() => $('cam').classList.remove('hit'), 250);
+    pick(item, 'scan');
+  } else {
+    rejectScan(code);
+  }
 }
 
 function rejectScan(code) {
   beep(true);
   resetSleepTimer();
+  $('cam').classList.add('reject');
+  setTimeout(() => $('cam').classList.remove('reject'), 400);
   $('item').className = 'item-monitor reject';
   $('itemCode').textContent = code;
   $('itemName').textContent = '관리 대상 자재가 아닙니다 (단량 미등록)';
@@ -707,14 +721,13 @@ function esc(s) { return String(s || '').replace(/[&<>"']/g, (c) => ({ '&': '&am
 
 function pick(item, source) {
   current = item;
-  stopCameraHardware(false);
+  pauseCameraForInput();
   $('app').classList.add('picking');
   $('camHold').hidden = false;
 
   const lMult = item.looseMult || 1;
   $('item').className = 'item-monitor active';
-  const modeTag = source === 'ocr' ? ' · [글자인식]' : '';
-  $('itemCode').textContent = item.code + (item.vendor ? ' · ' + item.vendor : '') + modeTag;
+  $('itemCode').textContent = item.code + (item.vendor ? ' · ' + item.vendor : '');
   $('itemUnit').textContent = '1파렛트=' + fmt(item.unit);
   $('itemUnit').hidden = false;
 
@@ -732,8 +745,8 @@ function pick(item, source) {
   $('itemName').textContent = item.name;
   ['loose', 'pallets', 'note'].forEach((id) => { $(id).disabled = false; $(id).value = ''; });
   updateCalc();
-  if (source === 'scan' || source === 'ocr') beep();
-  setTimeout(() => $('loose').focus({ preventScroll: true }), 50);
+  if (source === 'scan') beep(false);
+  setTimeout(() => $('loose').focus({ preventScroll: true }), 30);
 }
 
 function cancelPick() {
@@ -747,10 +760,10 @@ function cancelPick() {
   $('itemLooseUnit').hidden = true;
   $('looseLabel').textContent = '잔량 (낱개)';
   $('looseHead').classList.remove('mult-on');
-  $('itemName').textContent = '바코드 또는 라벨의 품번 숫자를 비추세요';
+  $('itemName').textContent = '카메라 창 안에 바코드가 들어오게 비추세요';
   ['loose', 'pallets', 'note'].forEach((id) => { $(id).disabled = true; $(id).value = ''; });
   updateCalc();
-  startCameraHardware();
+  startCamera();
 }
 
 function updateCalc() {
@@ -926,7 +939,7 @@ function renderRecent() {
 
 /* ════════ 검색 및 이벤트 ════════ */
 const norm = (s) => String(s || '').toLowerCase().replace(/\s+/g, '');
-$('search').addEventListener('focus', () => { stopCameraHardware(false); renderSuggest(); });
+$('search').addEventListener('focus', () => { pauseCameraForInput(); renderSuggest(); });
 $('search').addEventListener('input', renderSuggest);
 
 function renderSuggest() {
@@ -956,7 +969,7 @@ $('suggest').addEventListener('click', (e) => {
 document.addEventListener('pointerdown', (e) => {
   if (!e.target.closest('.search-wrap') && !$('suggest').hidden) {
     $('suggest').hidden = true;
-    if (!current) startCameraHardware();
+    if (!current) startCamera();
   }
 });
 
@@ -967,6 +980,15 @@ $('note').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preven
 $('save').addEventListener('click', save);
 $('camHold').addEventListener('click', cancelPick);
 $('syncBtn').addEventListener('click', () => { toast('구글 시트 데이터를 새로 불러옵니다.'); boot(); });
+
+// 앱 화면을 내리거나 다른 앱으로 전환 시 즉시 카메라 전원 차단 (배터리 보호)
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') {
+    stopCameraCompletely();
+  } else if (document.visibilityState === 'visible' && !current) {
+    startCamera();
+  }
+});
 
 function initBackGuard() {
   try {
@@ -989,11 +1011,12 @@ function beep(low) {
     actx = actx || new (window.AudioContext || window.webkitAudioContext)();
     if (actx.state === 'suspended') actx.resume();
     const o = actx.createOscillator(), g = actx.createGain(), t = actx.currentTime;
-    o.frequency.value = low ? 420 : 1400;
-    g.gain.setValueAtTime(0.12, t);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.1);
+    o.frequency.value = low ? 420 : 1450;
+    g.gain.setValueAtTime(0.15, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.09);
     o.connect(g); g.connect(actx.destination);
-    o.start(t); o.stop(t + 0.1);
+    o.start(t); o.stop(t + 0.09);
+    if (navigator.vibrate) navigator.vibrate(low ? [70, 50, 70] : 50);
   } catch (e) {}
 }
 
@@ -1007,7 +1030,7 @@ function toast(msg) {
 updateWorkerUI();
 initBackGuard();
 boot();
-startCameraHardware();
+startCamera();
 </script>
 </body>
 </html>
