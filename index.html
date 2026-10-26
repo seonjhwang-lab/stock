@@ -1,21 +1,20 @@
 <!DOCTYPE html>
-<html lang="ko" data-theme="pro">
+<html lang="ko">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <meta name="theme-color" content="#0f172a">
-  <title>자재 재고실사 스캐너</title>
+  <title>자재 재고실사</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/galmuri@latest/dist/galmuri.css">
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js" defer></script>
   <style>
-    /* ════════ 1. 모던 프로(Pro) 테마 & 2. Aseprite 도트(Pixel) 테마 변수 ════════ */
-    :root[data-theme="pro"] {
+    :root {
       --bg: #f1f5f9;
-      --header-bg: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      --header-bg: #0f172a;
       --card: #ffffff;
       --card-border: #e2e8f0;
-      --card-shadow: 0 4px 16px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
+      --card-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
       --ink: #0f172a;
       --sub: #64748b;
       --faint: #94a3b8;
@@ -23,110 +22,76 @@
       --field-border: #cbd5e1;
       --accent: #2563eb;
       --accent-soft: #dbeafe;
-      --emerald: #10b981;
       --amber: #f59e0b;
       --danger: #ef4444;
       --radius-lg: 18px;
       --radius-md: 12px;
-      --btn-shadow: 0 4px 0 #1e3a8a;
-      --font-main: "Pretendard Variable", Pretendard, -apple-system, sans-serif;
-    }
-
-    :root[data-theme="pixel"] {
-      --bg: #2b2d42;
-      --header-bg: #1a1b26;
-      --card: #f4f1de;
-      --card-border: #1a1b26;
-      --card-shadow: 4px 4px 0px #1a1b26;
-      --ink: #1a1b26;
-      --sub: #4a4e69;
-      --faint: #8d99ae;
-      --fill: #ffffff;
-      --field-border: #1a1b26;
-      --accent: #e07a5f;
-      --accent-soft: #f2cc8f;
-      --emerald: #3d8b7d;
-      --amber: #f4a261;
-      --danger: #e63946;
-      --radius-lg: 4px;
-      --radius-md: 4px;
-      --btn-shadow: 0 4px 0 #1a1b26;
-      --font-main: "Galmuri11", "Pretendard Variable", sans-serif;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
     [hidden] { display: none !important; }
     svg.px { shape-rendering: crispEdges; flex-shrink: 0; }
 
-    html, body { height: 100%; background: var(--bg); color: var(--ink); font-family: var(--font-main); overflow-x: hidden; }
+    html, body {
+      height: 100%; background: var(--bg); color: var(--ink);
+      font-family: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, "Malgun Gothic", sans-serif;
+      overflow-x: hidden; -webkit-font-smoothing: antialiased;
+    }
     button, input { font: inherit; color: inherit; }
     button { cursor: pointer; border: 0; background: none; }
 
     .app {
-      min-height: 100%;
-      display: flex;
-      flex-direction: column;
-      max-width: 500px;
-      margin: 0 auto;
-      padding-bottom: 24px;
+      min-height: 100%; display: flex; flex-direction: column;
+      max-width: 500px; margin: 0 auto; padding-bottom: 24px;
     }
 
-    /* ── 상단 콘솔 헤더 ── */
+    /* ── 심플 상단 헤더 (작업자 & 시트 새로고침만 배치) ── */
     .console-header {
-      background: var(--header-bg);
-      color: #fff;
+      background: var(--header-bg); color: #fff;
       padding: calc(10px + env(safe-area-inset-top, 0px)) 16px 12px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      border-bottom: 2px solid var(--card-border);
-      box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+      display: flex; justify-content: space-between; align-items: center;
     }
-    .brand { display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 15px; letter-spacing: -0.02em; }
+    .brand { display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 15px; }
     .header-actions { display: flex; gap: 6px; align-items: center; }
     .h-btn {
       display: flex; align-items: center; gap: 5px;
-      padding: 6px 10px;
-      border-radius: var(--radius-md);
+      padding: 6px 11px; border-radius: 10px;
       background: rgba(255, 255, 255, 0.12);
-      border: 1px solid rgba(255, 255, 255, 0.2);
       color: #fff; font-size: 12px; font-weight: 700;
-      transition: transform 0.08s, background 0.15s;
     }
-    .h-btn:active { transform: translateY(2px); background: rgba(255, 255, 255, 0.22); }
-    .h-btn.worker-active { background: #2563eb; border-color: #60a5fa; }
+    .h-btn:active { opacity: 0.8; }
+    .h-btn.worker-active { background: var(--accent); }
 
-    /* ── 카메라 뷰파인더 & 레이저 애니메이션 ── */
+    /* ── 무버튼 스마트 카메라 뷰파인더 ── */
     .cam-card {
       margin: 12px 14px 0;
       border-radius: var(--radius-lg);
-      border: 2px solid var(--card-border);
       box-shadow: var(--card-shadow);
-      overflow: hidden;
-      background: #090d16;
+      overflow: hidden; background: #090d16;
       position: relative;
-      height: clamp(145px, 23dvh, 210px);
+      height: clamp(155px, 24dvh, 215px);
       transition: height 0.2s ease;
+      cursor: pointer;
     }
-    /* 키패드 올라올 때 상단 카메라를 42px 슬림 바로 축소 */
     .app.picking .cam-card { height: 42px !important; }
-    .app.picking .hud-frame, .app.picking #reader { opacity: 0; pointer-events: none; }
+    .app.picking .hud-frame, .app.picking .cam-status, .app.picking #reader { opacity: 0; pointer-events: none; }
     .app.picking .search-wrap { display: none; }
 
-    #reader { position: absolute; inset: 0; }
+    #reader { position: absolute; inset: 0; transform-origin: center center; }
     #reader video { display: block; width: 100% !important; height: 100% !important; object-fit: cover; }
     #reader > div, #reader canvas { display: none !important; }
 
-    /* 스캐너 코너 브래킷 & 레이저 빔 */
     .hud-frame {
       position: absolute; z-index: 2;
-      left: 13%; right: 13%; top: 22%; bottom: 24%;
+      left: 11%; right: 11%; top: 22%; bottom: 24%;
       pointer-events: none;
     }
     .hud-corner {
       position: absolute; width: 18px; height: 18px;
       border-color: #38bdf8; border-style: solid; border-width: 0;
+      transition: border-color 0.2s;
     }
+    .cam-card.torch-active .hud-corner { border-color: #fbbf24; }
     .hud-corner.tl { top: 0; left: 0; border-top-width: 3px; border-left-width: 3px; border-top-left-radius: 6px; }
     .hud-corner.tr { top: 0; right: 0; border-top-width: 3px; border-right-width: 3px; border-top-right-radius: 6px; }
     .hud-corner.bl { bottom: 0; left: 0; border-bottom-width: 3px; border-left-width: 3px; border-bottom-left-radius: 6px; }
@@ -136,24 +101,29 @@
       position: absolute; left: 4%; right: 4%; height: 2px;
       background: linear-gradient(90deg, transparent, #ef4444, #fca5a5, #ef4444, transparent);
       box-shadow: 0 0 10px 2px rgba(239, 68, 68, 0.85);
-      animation: scanLaser 2s ease-in-out infinite;
+      animation: scanLaser 1.8s ease-in-out infinite;
     }
     @keyframes scanLaser {
-      0%, 100% { top: 12%; opacity: 0.7; }
-      50% { top: 88%; opacity: 1; }
+      0%, 100% { top: 15%; opacity: 0.7; }
+      50% { top: 85%; opacity: 1; }
     }
 
     .cam-status {
-      position: absolute; z-index: 3; left: 12px; bottom: 8px;
+      position: absolute; z-index: 3; left: 12px; right: 12px; bottom: 8px;
+      display: flex; justify-content: space-between; align-items: center;
+      pointer-events: none;
+    }
+    .status-pill {
       display: inline-flex; align-items: center; gap: 6px;
       padding: 4px 10px; border-radius: 999px;
-      background: rgba(9, 13, 22, 0.75); backdrop-filter: blur(4px);
+      background: rgba(9, 13, 22, 0.78); backdrop-filter: blur(4px);
       font-size: 11px; font-weight: 700; color: #e2e8f0;
     }
     .led { width: 7px; height: 7px; border-radius: 50%; background: #10b981; box-shadow: 0 0 6px #10b981; }
+    .led.torch { background: #fbbf24; box-shadow: 0 0 8px #fbbf24; }
 
     .cam-overlay-btn {
-      position: absolute; z-index: 4; inset: 0; width: 100%;
+      position: absolute; z-index: 6; inset: 0; width: 100%;
       display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
       background: rgba(15, 23, 42, 0.92); color: #fff;
       font-size: 13px; font-weight: 700;
@@ -162,26 +132,18 @@
 
     /* ── 메인 작업 패널 카드 ── */
     .work-card {
-      margin: 10px 14px 0;
-      padding: 14px;
-      background: var(--card);
-      border: 2px solid var(--card-border);
-      border-radius: var(--radius-lg);
-      box-shadow: var(--card-shadow);
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
+      margin: 10px 14px 0; padding: 14px;
+      background: var(--card); border: 1.5px solid var(--card-border);
+      border-radius: var(--radius-lg); box-shadow: var(--card-shadow);
+      display: flex; flex-direction: column; gap: 11px;
     }
 
-    /* 검색창 */
     .search-wrap { position: relative; }
     .search-box {
       display: flex; align-items: center; gap: 8px;
       height: 44px; padding: 0 12px;
-      background: var(--fill);
-      border: 2px solid var(--field-border);
+      background: var(--fill); border: 1.5px solid var(--field-border);
       border-radius: var(--radius-md);
-      transition: border-color 0.15s;
     }
     .search-box:focus-within { border-color: var(--accent); background: #fff; }
     .search-box input {
@@ -195,7 +157,7 @@
       max-height: 260px; overflow-y: auto;
       list-style: none; background: var(--card);
       border: 2px solid var(--ink); border-radius: var(--radius-md);
-      box-shadow: 0 14px 30px rgba(0, 0, 0, 0.22);
+      box-shadow: 0 14px 30px rgba(0, 0, 0, 0.18);
     }
     .suggest button {
       display: flex; width: 100%; align-items: center; gap: 8px;
@@ -207,12 +169,10 @@
     .s-name { flex: 1; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .s-unit { font-size: 11px; font-weight: 700; padding: 2px 6px; border-radius: 6px; background: var(--fill); color: var(--sub); }
 
-    /* 자재 정보 디스플레이 모니터 */
+    /* 자재 정보 모니터 */
     .item-monitor {
-      padding: 11px 13px;
-      border-radius: var(--radius-md);
-      background: var(--fill);
-      border: 2px solid var(--field-border);
+      padding: 11px 13px; border-radius: var(--radius-md);
+      background: var(--fill); border: 1.5px solid var(--field-border);
       display: flex; flex-direction: column; gap: 4px;
     }
     .item-monitor.active {
@@ -224,31 +184,24 @@
     .item-code { font-size: 12px; font-weight: 800; color: var(--sub); font-variant-numeric: tabular-nums; }
     .badges { display: flex; gap: 5px; }
     .badge-pill {
-      padding: 3px 8px; border-radius: 6px;
-      font-size: 11px; font-weight: 800;
+      padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 800;
       background: #e2e8f0; color: #1e293b;
-      border: 1px solid rgba(0,0,0,0.1);
     }
-    .badge-pill.mult { background: #fef3c7; color: #b45309; border-color: #f59e0b; }
+    .badge-pill.mult { background: #fef3c7; color: #b45309; border: 1px solid #f59e0b; }
     .item-name { font-size: 18px; font-weight: 800; line-height: 1.25; word-break: keep-all; }
     .item-monitor.idle .item-name { color: var(--faint); font-size: 15px; font-weight: 600; }
 
-    /* ── 왼쪽: 잔량 / 오른쪽: 파렛트 입체 입력 슬롯 ── */
+    /* 왼쪽: 잔량 / 오른쪽: 파렛트 */
     .counts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
     .slot {
       display: flex; flex-direction: column; gap: 4px;
-      padding: 9px 12px;
-      border-radius: var(--radius-md);
-      background: var(--fill);
-      border: 2px solid var(--field-border);
-      cursor: text;
-      transition: all 0.15s;
+      padding: 9px 12px; border-radius: var(--radius-md);
+      background: var(--fill); border: 1.5px solid var(--field-border);
+      cursor: text; transition: all 0.15s;
     }
     .slot:focus-within {
-      border-color: var(--accent);
-      background: #ffffff;
-      transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.12);
+      border-color: var(--accent); background: #ffffff;
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
     }
     .slot-head { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 800; color: var(--sub); }
     .slot-head.mult-on { color: #d97706; }
@@ -258,71 +211,47 @@
     }
     .slot input::placeholder { color: var(--faint); font-weight: 600; }
 
-    /* 특이사항 메모 */
     .note-slot {
       display: flex; align-items: center; gap: 8px;
-      height: 40px; padding: 0 12px;
-      border-radius: var(--radius-md);
-      background: var(--fill);
-      border: 2px solid var(--field-border);
+      height: 40px; padding: 0 12px; border-radius: var(--radius-md);
+      background: var(--fill); border: 1.5px solid var(--field-border);
     }
     .note-slot:focus-within { border-color: var(--accent); background: #fff; }
     .note-slot input { flex: 1; border: 0; background: transparent; outline: none; font-size: 13px; font-weight: 600; }
     .note-slot input::placeholder { color: var(--faint); font-weight: 500; }
 
-    /* 입체 택타일(Tactile) 저장 버튼 */
     .save-btn {
       width: 100%; height: 52px; padding: 0 18px;
       border-radius: var(--radius-md);
       background: var(--accent); color: #ffffff;
-      border: 2px solid #1e3a8a;
-      box-shadow: var(--btn-shadow);
+      box-shadow: 0 4px 0 #1e3a8a;
       display: flex; align-items: center; justify-content: space-between;
       font-size: 16px; font-weight: 800;
-      transition: transform 0.06s, box-shadow 0.06s, background 0.15s;
+      transition: transform 0.06s, box-shadow 0.06s;
     }
-    .save-btn:active:not(:disabled) {
-      transform: translateY(3px);
-      box-shadow: 0 1px 0 #1e3a8a;
-    }
+    .save-btn:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 1px 0 #1e3a8a; }
     .save-btn.solo { justify-content: center; }
-    .save-btn:disabled {
-      background: #e2e8f0; color: #94a3b8;
-      border-color: #cbd5e1; box-shadow: none;
-    }
+    .save-btn:disabled { background: #e2e8f0; color: #94a3b8; box-shadow: none; }
     .save-calc { font-size: 13px; font-weight: 700; color: rgba(255,255,255,0.88); }
 
     /* ── 하단 시트 이력 카드 ── */
     .log-card {
-      margin: 12px 14px 0;
-      background: var(--card);
-      border: 2px solid var(--card-border);
-      border-radius: var(--radius-lg);
-      box-shadow: var(--card-shadow);
-      overflow: hidden;
+      margin: 12px 14px 0; background: var(--card);
+      border: 1.5px solid var(--card-border); border-radius: var(--radius-lg);
+      box-shadow: var(--card-shadow); overflow: hidden;
     }
     .log-header {
       display: flex; justify-content: space-between; align-items: center;
-      padding: 10px 14px;
-      background: var(--fill);
-      border-bottom: 2px solid var(--card-border);
+      padding: 10px 14px; background: var(--fill);
+      border-bottom: 1.5px solid var(--card-border);
     }
     .tab-group { display: flex; gap: 4px; }
-    .tab-btn {
-      padding: 6px 11px; border-radius: 8px;
-      font-size: 12px; font-weight: 800; color: var(--sub);
-      border: 1.5px solid transparent;
-    }
-    .tab-btn.active {
-      background: var(--ink); color: #fff;
-    }
+    .tab-btn { padding: 6px 11px; border-radius: 8px; font-size: 12px; font-weight: 800; color: var(--sub); }
+    .tab-btn.active { background: var(--ink); color: #fff; }
     .meta-tag { font-size: 11px; font-weight: 700; color: var(--sub); }
 
     .list { list-style: none; padding: 0 14px; max-height: 320px; overflow-y: auto; }
-    .row {
-      display: flex; align-items: center; gap: 10px;
-      padding: 11px 0; border-bottom: 1px solid var(--card-border);
-    }
+    .row { display: flex; align-items: center; gap: 10px; padding: 11px 0; border-bottom: 1px solid var(--card-border); }
     .row:last-child { border-bottom: 0; }
     .time-chip {
       font-size: 11px; font-weight: 800; color: var(--accent);
@@ -342,18 +271,18 @@
       position: fixed; z-index: 100; left: 50%; transform: translateX(-50%);
       bottom: calc(20px + env(safe-area-inset-bottom, 0px));
       padding: 11px 18px; border-radius: 12px;
-      background: #0f172a; color: #fff; border: 2px solid #38bdf8;
-      font-size: 13px; font-weight: 700; box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+      background: #0f172a; color: #fff;
+      font-size: 13px; font-weight: 700; box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+      max-width: 92vw; text-align: center;
     }
   </style>
 </head>
 <body>
 
 <main class="app" id="app">
-  <!-- 상단 콘솔 바 (픽셀 아이콘 + 작업자 시트 지정 + 테마 스위치) -->
+  <!-- 상단 헤더 (군더더기 없이 작업자 & 시트 새로고침만 유지) -->
   <header class="console-header">
     <div class="brand">
-      <!-- 16x16 픽셀 아트 바코드 스캐너 아이콘 -->
       <svg class="px" width="20" height="20" viewBox="0 0 16 16">
         <path fill="#38bdf8" d="M2 2h9v5H2z"/>
         <path fill="#0284c7" d="M3 3h7v3H3z"/>
@@ -361,11 +290,10 @@
         <path fill="#94a3b8" d="M5 7h4v6H5z"/>
         <path fill="#475569" d="M4 13h6v2H4z"/>
       </svg>
-      <span>SCM 재고스캐너</span>
+      <span>재고실사 스캐너</span>
     </div>
     <div class="header-actions">
-      <button type="button" class="h-btn" id="workerBtn" title="작업자 이름별로 시트가 따로 생성됩니다">
-        <!-- 픽셀 작업자 아이콘 -->
+      <button type="button" class="h-btn" id="workerBtn">
         <svg class="px" width="14" height="14" viewBox="0 0 16 16">
           <path fill="#fbbf24" d="M4 2h8v3H3V3h1z"/>
           <path fill="#fde68a" d="M5 5h6v4H5z"/>
@@ -373,13 +301,12 @@
         </svg>
         <span id="workerText">작업자 입력</span>
       </button>
-      <button type="button" class="h-btn" id="themeBtn">🎨 테마</button>
-      <button type="button" class="h-btn" id="syncBtn">🔄</button>
+      <button type="button" class="h-btn" id="syncBtn" title="시트 데이터 새로고침">🔄 동기화</button>
     </div>
   </header>
 
-  <!-- 카메라 뷰파인더 -->
-  <section class="cam-card" id="cam">
+  <!-- 무버튼 올인원 카메라 (FHD + 1.4x 자동줌 + 바코드/품번OCR 하이브리드 + 조도감지/터치 조명) -->
+  <section class="cam-card" id="cam" title="화면을 탭하면 조명이 켜지거나 꺼집니다">
     <div id="reader"></div>
     <div class="hud-frame">
       <div class="hud-corner tl"></div>
@@ -388,13 +315,17 @@
       <div class="hud-corner br"></div>
       <div class="laser-beam"></div>
     </div>
-    <div class="cam-status"><span class="led"></span><span id="camText">스캔 대기 중</span></div>
+    <div class="cam-status">
+      <span class="status-pill"><span class="led" id="camLed"></span><span id="camText">바코드 + 품번글자 동시 스캔 중</span></span>
+      <span class="status-pill" id="camSubHint">화면 탭: 🔦조명</span>
+    </div>
+
     <button type="button" class="cam-overlay-btn" id="camHold" hidden>
       <span>✕ 여기를 탭하거나 뒤로가기를 누르면 다시 스캔합니다</span>
     </button>
     <button type="button" class="cam-overlay-btn" id="camSleep" hidden>
-      <span>🔋 배터리 절약 대기 모드 (카메라 꺼짐)</span>
-      <small>화면을 탭하면 즉시 레이저 스캔이 다시 시작됩니다</small>
+      <span>🔋 배터리 절약 대기 모드</span>
+      <small>화면을 탭하면 즉시 스캔이 다시 시작됩니다</small>
     </button>
   </section>
 
@@ -405,7 +336,7 @@
         <svg class="px" width="16" height="16" viewBox="0 0 16 16">
           <path fill="#64748b" d="M5 2h5v2H5zM3 4h2v5H3zM10 4h2v5h-2zM5 9h5v2H5zM10 10h2v2h2v2h-2v-2h-2z"/>
         </svg>
-        <input id="search" type="search" placeholder="품번, 자재명 또는 공급업체 검색" autocomplete="off">
+        <input id="search" type="search" placeholder="품번(예: 0010), 자재명 또는 공급업체 검색" autocomplete="off">
       </div>
       <ul class="suggest" id="suggest" hidden></ul>
     </div>
@@ -419,14 +350,13 @@
           <span class="badge-pill" id="itemUnit" hidden></span>
         </div>
       </div>
-      <p class="item-name" id="itemName">바코드를 비추거나 검색해서 선택하세요</p>
+      <p class="item-name" id="itemName">바코드 또는 라벨의 품번 숫자를 비추세요</p>
     </div>
 
     <!-- 왼쪽: 잔량(롤/묶음) / 오른쪽: 파렛트 -->
     <div class="counts-grid">
       <label class="slot" id="looseField">
         <div class="slot-head" id="looseHead">
-          <!-- 16x16 픽셀 롤 자재 아이콘 -->
           <svg class="px" width="16" height="16" viewBox="0 0 16 16">
             <path fill="#38bdf8" d="M4 2h8v3H4zM3 5h10v8H3zM4 13h8v1H4z"/>
             <path fill="#0284c7" d="M6 3h4v1H6z"/>
@@ -439,7 +369,6 @@
 
       <label class="slot" id="palletField">
         <div class="slot-head">
-          <!-- 16x16 픽셀 파렛트+박스 아이콘 -->
           <svg class="px" width="16" height="16" viewBox="0 0 16 16">
             <path fill="#f59e0b" d="M3 2h4v4H3zM9 2h4v4H9zM3 7h10v4H3z"/>
             <path fill="#d97706" d="M4 3h2v2H4zM10 3h2v2h-2z"/>
@@ -459,7 +388,6 @@
       <input id="note" type="text" placeholder="특이사항 메모 (파손, LOT, 위치 등 — PC에서 수정 가능)" autocomplete="off" disabled>
     </div>
 
-    <!-- 입체 저장 버튼 -->
     <button type="button" class="save-btn solo" id="save" disabled>
       <span class="save-calc" id="calcText"></span>
       <span id="saveLabel">자재를 선택하세요</span>
@@ -484,10 +412,14 @@
 <script>
 const API_URL = 'https://script.google.com/macros/s/AKfycbyMrPtlVmS9tTHUDS5WrqNQp9LHZD1LKlKzhsRSkfuJNMENuswVDcSgni2GmwMXGkYz/exec';
 const API_KEY = 'dbslcka1!';
-const SLEEP_TIMEOUT_MS = 20000;
+const SLEEP_TIMEOUT_MS = 25000;
+const AUTO_ZOOM_LEVEL = 1.4; // 비닐 빛 반사 방지를 위한 최적 기본 배율(1.4x)
 
-const LOOSE_RULES = [
-  { type: 'code',   match: '41370026',   mult: 2 },
+const DEFAULT_CODE_MULTS = {
+  '41370026': 2, '42270010': 3, '41370067': 4,
+  '41370027': 3, '41270020': 6, '43370017': 1
+};
+const DEFAULT_KEYWORD_RULES = [
   { type: 'name',   match: '세퍼레이터', mult: 3 },
   { type: 'vendor', match: '한국쓰리엠', mult: 5 },
   { type: 'vendor', match: '효성티앤씨', mult: 4 }
@@ -501,22 +433,10 @@ let current = null;
 let recent = [];
 let viewMode = 'log';
 let currentWorker = localStorage.getItem('inv_worker') || '';
-let currentTheme = localStorage.getItem('inv_theme') || 'pro';
 let suggestions = [];
 let lastBackPress = 0;
 
-/* ════════ 테마 전환 (모던 프로 <-> Aseprite 도트) ════════ */
-function applyTheme(t) {
-  currentTheme = t;
-  document.documentElement.setAttribute('data-theme', t);
-  localStorage.setItem('inv_theme', t);
-  $('themeBtn').textContent = t === 'pro' ? '👾 도트UI' : '✨ 모던UI';
-}
-$('themeBtn').addEventListener('click', () => {
-  applyTheme(currentTheme === 'pro' ? 'pixel' : 'pro');
-});
-
-/* ════════ 작업자 설정 (작업자 이름별로 구글 시트 탭 자동 분리) ════════ */
+/* ════════ 작업자 설정 ════════ */
 function updateWorkerUI() {
   if (currentWorker) {
     $('workerText').textContent = currentWorker + ' (실사_' + currentWorker + ')';
@@ -527,7 +447,7 @@ function updateWorkerUI() {
   }
 }
 $('workerBtn').addEventListener('click', () => {
-  const name = prompt('작업자 이름을 입력해주세요.\n구글 시트에 [실사_이름] 탭이 자동으로 생성되어 본인 내역만 따로 기록됩니다.', currentWorker);
+  const name = prompt('작업자 이름을 입력해주세요.\n구글 시트에 [실사_이름] 탭이 자동 생성되어 기록됩니다.', currentWorker);
   if (name !== null) {
     currentWorker = name.trim();
     localStorage.setItem('inv_worker', currentWorker);
@@ -537,24 +457,154 @@ $('workerBtn').addEventListener('click', () => {
 });
 
 function getLooseMult(item) {
-  if (item.looseMult && item.looseMult > 1) return item.looseMult;
+  if (item.looseMult && item.looseMult >= 1) return item.looseMult;
   const c = String(item.code || '').trim();
+  if (DEFAULT_CODE_MULTS.hasOwnProperty(c)) return DEFAULT_CODE_MULTS[c];
   const n = String(item.name || '').replace(/\s+/g, '');
   const v = String(item.vendor || '').replace(/\s+/g, '');
-  for (const r of LOOSE_RULES) {
+  for (const r of DEFAULT_KEYWORD_RULES) {
     const m = r.match.replace(/\s+/g, '');
-    if (r.type === 'code' && c === m) return r.mult;
     if (r.type === 'name' && n.indexOf(m) > -1) return r.mult;
     if (r.type === 'vendor' && (v.indexOf(m) > -1 || n.indexOf(m) > -1)) return r.mult;
   }
   return 1;
 }
 
-/* ════════ 배터리 절약형 카메라 제어 ════════ */
+/* ════════ 무버튼 올인원 스마트 비전 엔진 (FHD + 1.4x 줌 + 자동조명 + 백그라운드 OCR) ════════ */
 let scanner = null;
 let camRunning = false;
 let sleepTimer = null;
+let visionLoopTimer = null;
 let lastScan = { code: '', t: 0 };
+let torchOn = false;
+let manualTorchOverride = false;
+let ocrWorker = null;
+let ocrBusy = false;
+
+function getActiveVideoTrack() {
+  const video = document.querySelector('#reader video');
+  if (!video || !video.srcObject) return null;
+  const tracks = video.srcObject.getVideoTracks();
+  return tracks && tracks.length ? tracks[0] : null;
+}
+
+// 카메라 하드웨어 조명(Torch) 제어 함수
+async function setTorch(on, isManual) {
+  const track = getActiveVideoTrack();
+  if (!track) return;
+  if (isManual) manualTorchOverride = true;
+  try {
+    await track.applyConstraints({ advanced: [{ torch: on }] });
+    torchOn = on;
+    $('cam').classList.toggle('torch-active', torchOn);
+    $('camLed').classList.toggle('torch', torchOn);
+    $('camSubHint').textContent = torchOn ? '🔦 조명 켜짐 (탭하여 끄기)' : '화면 탭: 🔦조명';
+    if (isManual) toast(torchOn ? '🔦 조명을 켰습니다 (비닐 반사 시 화면을 탭해 끄세요)' : '🔦 조명을 껐습니다');
+  } catch (e) {
+    if (isManual) toast('이 기기에서는 브라우저 조명 제어를 지원하지 않습니다.');
+  }
+}
+
+// 버튼 없이 카메라 화면 아무 곳이나 탭하면 조명 켜기/끄기 토글
+$('cam').addEventListener('click', (e) => {
+  if (e.target.closest('#camHold') || e.target.closest('#camSleep')) return;
+  if (!camRunning || current) return;
+  resetSleepTimer();
+  setTorch(!torchOn, true);
+});
+
+// 카메라 켜질 때 1.4배 스마트 줌 자동 적용 (비닐 반사 거리 확보)
+async function applySmartDefaultZoom() {
+  const track = getActiveVideoTrack();
+  let hwApplied = false;
+  if (track && track.getCapabilities) {
+    try {
+      const caps = track.getCapabilities();
+      if (caps.zoom && caps.zoom.max >= AUTO_ZOOM_LEVEL) {
+        await track.applyConstraints({ advanced: [{ zoom: AUTO_ZOOM_LEVEL }] });
+        hwApplied = true;
+      }
+    } catch (e) {}
+  }
+  $('reader').style.transform = hwApplied ? 'none' : 'scale(1.35)';
+}
+
+// 백그라운드 숫자 전용 OCR 워커 준비 (품번 8자리 숫자만 초고속으로 읽도록 제한)
+async function ensureOcrWorker() {
+  if (ocrWorker || typeof Tesseract === 'undefined') return ocrWorker;
+  try {
+    const w = await Tesseract.createWorker('eng');
+    await w.setParameters({
+      tessedit_char_whitelist: '0123456789-'
+    });
+    ocrWorker = w;
+  } catch (e) {}
+  return ocrWorker;
+}
+
+// 1.4초마다 자동 실행되는 백그라운드 비전 루프 (① 어두운 곳 자동 조명 켜기 + ② 품목번호 숫자 자동 OCR)
+function startSmartVisionLoop() {
+  clearInterval(visionLoopTimer);
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+
+  visionLoopTimer = setInterval(async () => {
+    if (!camRunning || current || ocrBusy || !items.length) return;
+    const video = document.querySelector('#reader video');
+    if (!video || !video.videoWidth) return;
+
+    ocrBusy = true;
+    try {
+      const vw = video.videoWidth;
+      const vh = video.videoHeight;
+      const sx = Math.floor(vw * 0.14);
+      const sy = Math.floor(vh * 0.28);
+      const sw = Math.floor(vw * 0.72);
+      const sh = Math.floor(vh * 0.44);
+
+      canvas.width = 480;
+      canvas.height = Math.max(120, Math.floor(480 * (sh / sw)));
+      ctx.drawImage(video, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+
+      // 1. 조도(밝기) 자동 측정 및 비닐 반사 보정용 이진화(대비 극대화)
+      const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const d = img.data;
+      let lumaSum = 0;
+      const pixelCount = d.length / 4;
+      for (let i = 0; i < d.length; i += 4) {
+        const luma = d[i] * 0.299 + d[i + 1] * 0.587 + d[i + 2] * 0.114;
+        lumaSum += luma;
+        // 글자 획을 선명하게 만들기 위해 대비(Contrast) 강화
+        const c = Math.max(0, Math.min(255, (luma - 128) * 1.55 + 128));
+        d[i] = d[i + 1] = d[i + 2] = c;
+      }
+      ctx.putImageData(img, 0, 0);
+
+      const avgLuma = lumaSum / pixelCount;
+      // 창고가 매우 어두우면(밝기 42 미만) 사용자가 수동으로 끄지 않은 이상 자동으로 조명을 켬
+      if (avgLuma < 42 && !torchOn && !manualTorchOverride) {
+        setTorch(true, false);
+      }
+
+      // 2. 바코드가 안 찍힐 때를 대비해 백그라운드에서 라벨 품목번호 숫자(8자리) 자동 판독
+      const worker = await ensureOcrWorker();
+      if (!worker || !camRunning || current) return;
+
+      const res = await worker.recognize(canvas);
+      const rawText = String((res && res.data && res.data.text) || '');
+      const cleanDigits = rawText.replace(/[^0-9]/g, ' ');
+
+      // 시트에 등록된 전체 품목번호(예: 41370027)와 정확히 일치하는 숫자가 라벨에 있으면 즉시 자동 선택!
+      const matched = itemsByLen.find((m) => m.code.length >= 6 && cleanDigits.indexOf(m.code) > -1);
+      if (matched && camRunning && !current) {
+        pick(matched, 'ocr');
+      }
+    } catch (e) {
+    } finally {
+      ocrBusy = false;
+    }
+  }, 1400);
+}
 
 function resetSleepTimer() {
   clearTimeout(sleepTimer);
@@ -567,7 +617,7 @@ async function startCameraHardware() {
   if (camRunning || current) return;
   $('camSleep').hidden = true;
   $('camHold').hidden = true;
-  $('camText').textContent = '카메라 켜는 중...';
+  $('camText').textContent = '고화질 스캐너 준비 중...';
 
   if (!scanner) {
     const F = Html5QrcodeSupportedFormats;
@@ -578,9 +628,35 @@ async function startCameraHardware() {
     });
   }
   try {
-    await scanner.start({ facingMode: 'environment' }, { fps: 8, disableFlip: true }, onDecode, () => {});
+    await scanner.start(
+      { facingMode: 'environment' },
+      {
+        fps: 12,
+        disableFlip: true,
+        qrbox: (vw, vh) => ({
+          width: Math.max(180, Math.floor(vw * 0.78)),
+          height: Math.max(80, Math.floor(vh * 0.50))
+        }),
+        videoConstraints: {
+          facingMode: 'environment',
+          width: { ideal: 1920 },
+          height: { ideal: 1080 },
+          focusMode: 'continuous'
+        }
+      },
+      onDecode,
+      () => {}
+    );
     camRunning = true;
-    $('camText').textContent = '레이저 스캔 중 (20초 후 절전)';
+    torchOn = false;
+    manualTorchOverride = false;
+    $('cam').classList.remove('torch-active');
+    $('camLed').classList.remove('torch');
+    $('camText').textContent = '바코드 + 품번글자 자동 스캔 중';
+    $('camSubHint').textContent = '화면 탭: 🔦조명';
+
+    await applySmartDefaultZoom();
+    startSmartVisionLoop();
     resetSleepTimer();
   } catch (e) {
     camRunning = false;
@@ -590,6 +666,10 @@ async function startCameraHardware() {
 
 async function stopCameraHardware(isSleep) {
   clearTimeout(sleepTimer);
+  clearInterval(visionLoopTimer);
+  torchOn = false;
+  $('cam').classList.remove('torch-active');
+  $('camLed').classList.remove('torch');
   if (scanner && camRunning) {
     try { await scanner.stop(); } catch (e) {}
   }
@@ -633,25 +713,26 @@ function pick(item, source) {
 
   const lMult = item.looseMult || 1;
   $('item').className = 'item-monitor active';
-  $('itemCode').textContent = item.code + (item.vendor ? ' · ' + item.vendor : '');
+  const modeTag = source === 'ocr' ? ' · [글자인식]' : '';
+  $('itemCode').textContent = item.code + (item.vendor ? ' · ' + item.vendor : '') + modeTag;
   $('itemUnit').textContent = '1파렛트=' + fmt(item.unit);
   $('itemUnit').hidden = false;
 
   if (lMult > 1) {
     $('itemLooseUnit').textContent = '잔량 1묶음=' + lMult + '롤';
     $('itemLooseUnit').hidden = false;
-    $('looseLabel').textContent = '잔량 묶음 (×' + lMult + '배수)';
+    $('looseLabel').textContent = '잔량 묶음 (×' + lMult + '롤)';
     $('looseHead').classList.add('mult-on');
   } else {
     $('itemLooseUnit').hidden = true;
-    $('looseLabel').textContent = '잔량 (낱개)';
+    $('looseLabel').textContent = '잔량 (1롤/낱개)';
     $('looseHead').classList.remove('mult-on');
   }
 
   $('itemName').textContent = item.name;
   ['loose', 'pallets', 'note'].forEach((id) => { $(id).disabled = false; $(id).value = ''; });
   updateCalc();
-  if (source === 'scan') beep();
+  if (source === 'scan' || source === 'ocr') beep();
   setTimeout(() => $('loose').focus({ preventScroll: true }), 50);
 }
 
@@ -666,7 +747,7 @@ function cancelPick() {
   $('itemLooseUnit').hidden = true;
   $('looseLabel').textContent = '잔량 (낱개)';
   $('looseHead').classList.remove('mult-on');
-  $('itemName').textContent = '바코드를 비추거나 검색해서 선택하세요';
+  $('itemName').textContent = '바코드 또는 라벨의 품번 숫자를 비추세요';
   ['loose', 'pallets', 'note'].forEach((id) => { $(id).disabled = true; $(id).value = ''; });
   updateCalc();
   startCameraHardware();
@@ -779,7 +860,7 @@ async function send(req) {
   renderRecent();
 }
 
-/* ════════ 하단 탭 렌더링 (내 시트 이력 vs 전체 실사집계) ════════ */
+/* ════════ 하단 탭 렌더링 ════════ */
 function setViewMode(mode) {
   viewMode = mode;
   $('tabLog').classList.toggle('active', mode === 'log');
@@ -811,7 +892,6 @@ function renderRecent() {
     return;
   }
 
-  // 전체 실사집계 (시간별 중복 이력 없이 작업자별 합계만 깔끔하게 표시)
   const groups = {};
   const order = [];
   recent.forEach((r) => {
@@ -859,7 +939,7 @@ function renderSuggest() {
         '<li><button type="button" data-i="' + i + '">' +
           '<span class="s-code">[' + esc(m.code) + ']</span>' +
           '<span class="s-name">' + esc(m.name) + (m.vendor ? ' · ' + esc(m.vendor) : '') + '</span>' +
-          '<span class="s-unit">단량:' + fmt(m.unit) + (m.looseMult > 1 ? ' / ×' + m.looseMult : '') + '</span>' +
+          '<span class="s-unit">단량:' + fmt(m.unit) + (m.looseMult > 1 ? ' / 잔량×' + m.looseMult : '') + '</span>' +
         '</button></li>').join('')
     : '<li class="empty">일치하는 관리 자재가 없습니다</li>';
   box.hidden = false;
@@ -886,7 +966,7 @@ $('pallets').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.pre
 $('note').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); save(); } });
 $('save').addEventListener('click', save);
 $('camHold').addEventListener('click', cancelPick);
-$('syncBtn').addEventListener('click', () => { toast('구글 시트 데이터를 새로고침합니다.'); boot(); });
+$('syncBtn').addEventListener('click', () => { toast('구글 시트 데이터를 새로 불러옵니다.'); boot(); });
 
 function initBackGuard() {
   try {
@@ -924,7 +1004,6 @@ function toast(msg) {
 }
 
 /* ════════ 시작 ════════ */
-applyTheme(currentTheme);
 updateWorkerUI();
 initBackGuard();
 boot();
