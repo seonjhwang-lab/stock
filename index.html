@@ -6,7 +6,6 @@
   <meta name="theme-color" content="#0f172a">
   <title>자재 재고실사</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
-  <!-- iOS 등 BarcodeDetector 미지원 브라우저용 보조 엔진 -->
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <style>
     :root {
@@ -37,7 +36,7 @@
       font-family: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, "Malgun Gothic", sans-serif;
       overflow-x: hidden; -webkit-font-smoothing: antialiased;
     }
-    button, input { font: inherit; color: inherit; }
+    button, input, select { font: inherit; color: inherit; }
     button { cursor: pointer; border: 0; background: none; }
 
     .app {
@@ -51,18 +50,22 @@
       padding: calc(10px + env(safe-area-inset-top, 0px)) 16px 12px;
       display: flex; justify-content: space-between; align-items: center;
     }
-    .brand { display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 15px; }
+    .brand { display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 14px; }
+    .date-badge {
+      font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 6px;
+      background: rgba(56, 189, 248, 0.2); color: #7dd3fc;
+    }
     .header-actions { display: flex; gap: 6px; align-items: center; }
     .h-btn {
       display: flex; align-items: center; gap: 5px;
-      padding: 6px 11px; border-radius: 10px;
+      padding: 6px 10px; border-radius: 10px;
       background: rgba(255, 255, 255, 0.12);
       color: #fff; font-size: 12px; font-weight: 700;
     }
     .h-btn:active { opacity: 0.8; }
     .h-btn.worker-active { background: var(--accent); }
 
-    /* ── 카메라 뷰파인더 (가짜 애니메이션 제거 · 화면 전체 1:1 스캔) ── */
+    /* ── 카메라 뷰파인더 ── */
     .cam-card {
       margin: 12px 14px 0;
       border-radius: var(--radius-lg);
@@ -70,48 +73,37 @@
       box-shadow: var(--card-shadow);
       overflow: hidden; background: #000;
       position: relative;
-      height: clamp(160px, 25dvh, 220px);
+      height: clamp(155px, 24dvh, 215px);
       transition: height 0.15s ease, border-color 0.15s ease;
       cursor: pointer;
     }
-    /* 바코드 인식 순간 초록색 테두리 피드백 */
     .cam-card.hit { border-color: var(--emerald); box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.25); }
     .cam-card.reject { border-color: var(--danger); }
 
-    /* 수량 입력 중일 때 키패드 가림 방지용 슬림 바 축소 */
     .app.picking .cam-card { height: 42px !important; border-color: #334155; }
     .app.picking #camVideo, .app.picking #fallbackReader, .app.picking .aim-line, .app.picking .cam-status {
       opacity: 0; pointer-events: none;
     }
     .app.picking .search-wrap { display: none; }
 
-    #camVideo {
-      position: absolute; inset: 0;
-      width: 100%; height: 100%;
-      object-fit: cover; display: block;
-    }
+    #camVideo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
     #fallbackReader { position: absolute; inset: 0; }
     #fallbackReader video { width: 100% !important; height: 100% !important; object-fit: cover; }
     #fallbackReader > div, #fallbackReader canvas { display: none !important; }
 
-    /* 시선 고정용 아주 얇은 정적 중앙 가이드선 1개만 표시 */
     .aim-line {
-      position: absolute; z-index: 2;
-      left: 10%; right: 10%; top: 50%; height: 1px;
-      background: rgba(255, 255, 255, 0.35);
-      pointer-events: none;
+      position: absolute; z-index: 2; left: 10%; right: 10%; top: 50%; height: 1px;
+      background: rgba(255, 255, 255, 0.35); pointer-events: none;
     }
 
     .cam-status {
       position: absolute; z-index: 3; left: 10px; right: 10px; bottom: 8px;
-      display: flex; justify-content: space-between; align-items: center;
-      pointer-events: none;
+      display: flex; justify-content: space-between; align-items: center; pointer-events: none;
     }
     .status-pill {
       display: inline-flex; align-items: center; gap: 6px;
       padding: 4px 10px; border-radius: 999px;
-      background: rgba(15, 23, 42, 0.75);
-      font-size: 11px; font-weight: 700; color: #f8fafc;
+      background: rgba(15, 23, 42, 0.75); font-size: 11px; font-weight: 700; color: #f8fafc;
     }
     .led { width: 7px; height: 7px; border-radius: 50%; background: var(--emerald); }
     .led.torch { background: #fbbf24; }
@@ -119,8 +111,7 @@
     .cam-overlay-btn {
       position: absolute; z-index: 6; inset: 0; width: 100%;
       display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
-      background: rgba(15, 23, 42, 0.92); color: #fff;
-      font-size: 13px; font-weight: 700;
+      background: rgba(15, 23, 42, 0.92); color: #fff; font-size: 13px; font-weight: 700;
     }
     .cam-overlay-btn small { font-size: 11px; color: #94a3b8; font-weight: 500; }
 
@@ -140,10 +131,7 @@
       border-radius: var(--radius-md);
     }
     .search-box:focus-within { border-color: var(--accent); background: #fff; }
-    .search-box input {
-      flex: 1; border: 0; background: transparent; outline: none;
-      font-size: 14px; font-weight: 600;
-    }
+    .search-box input { flex: 1; border: 0; background: transparent; outline: none; font-size: 14px; font-weight: 600; }
     .search-box input::placeholder { color: var(--faint); font-weight: 500; }
 
     .suggest {
@@ -163,7 +151,6 @@
     .s-name { flex: 1; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .s-unit { font-size: 11px; font-weight: 700; padding: 2px 6px; border-radius: 6px; background: var(--fill); color: var(--sub); }
 
-    /* 자재 정보 모니터 */
     .item-monitor {
       padding: 11px 13px; border-radius: var(--radius-md);
       background: var(--fill); border: 1.5px solid var(--field-border);
@@ -177,26 +164,18 @@
     .item-top { display: flex; justify-content: space-between; align-items: center; gap: 6px; flex-wrap: wrap; }
     .item-code { font-size: 12px; font-weight: 800; color: var(--sub); font-variant-numeric: tabular-nums; }
     .badges { display: flex; gap: 5px; }
-    .badge-pill {
-      padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 800;
-      background: #e2e8f0; color: #1e293b;
-    }
+    .badge-pill { padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 800; background: #e2e8f0; color: #1e293b; }
     .badge-pill.mult { background: #fef3c7; color: #b45309; border: 1px solid #f59e0b; }
     .item-name { font-size: 18px; font-weight: 800; line-height: 1.25; word-break: keep-all; }
     .item-monitor.idle .item-name { color: var(--faint); font-size: 15px; font-weight: 600; }
 
-    /* 왼쪽: 잔량 / 오른쪽: 파렛트 */
     .counts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
     .slot {
       display: flex; flex-direction: column; gap: 4px;
       padding: 9px 12px; border-radius: var(--radius-md);
-      background: var(--fill); border: 1.5px solid var(--field-border);
-      cursor: text;
+      background: var(--fill); border: 1.5px solid var(--field-border); cursor: text;
     }
-    .slot:focus-within {
-      border-color: var(--accent); background: #ffffff;
-      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
-    }
+    .slot:focus-within { border-color: var(--accent); background: #ffffff; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12); }
     .slot-head { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 800; color: var(--sub); }
     .slot-head.mult-on { color: #d97706; }
     .slot input {
@@ -221,7 +200,6 @@
       box-shadow: 0 4px 0 #1e3a8a;
       display: flex; align-items: center; justify-content: space-between;
       font-size: 16px; font-weight: 800;
-      transition: transform 0.06s, box-shadow 0.06s;
     }
     .save-btn:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 1px 0 #1e3a8a; }
     .save-btn.solo { justify-content: center; }
@@ -244,8 +222,13 @@
     .tab-btn.active { background: var(--ink); color: #fff; }
     .meta-tag { font-size: 11px; font-weight: 700; color: var(--sub); }
 
-    .list { list-style: none; padding: 0 14px; max-height: 320px; overflow-y: auto; }
-    .row { display: flex; align-items: center; gap: 10px; padding: 11px 0; border-bottom: 1px solid var(--card-border); }
+    .list { list-style: none; padding: 0 14px; max-height: 340px; overflow-y: auto; }
+    .row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 11px 0; border-bottom: 1px solid var(--card-border);
+      cursor: pointer;
+    }
+    .row:active { background: #f8fafc; }
     .row:last-child { border-bottom: 0; }
     .time-chip {
       font-size: 11px; font-weight: 800; color: var(--accent);
@@ -258,8 +241,42 @@
     .row-note { margin-top: 3px; font-size: 11px; font-weight: 700; color: #d97706; }
     .row-qty { text-align: right; font-variant-numeric: tabular-nums; }
     .row-qty b { display: block; font-size: 16px; font-weight: 900; color: var(--ink); }
-    .row-qty span { font-size: 11px; font-weight: 700; color: var(--sub); }
+    .row-qty span { font-size: 11px; font-weight: 700; color: var(--accent); }
     .empty { padding: 24px 0; text-align: center; font-size: 13px; font-weight: 600; color: var(--faint); }
+
+    /* ── 스캔 이력 수정/삭제 모달 팝업 ── */
+    .modal-backdrop {
+      position: fixed; z-index: 90; inset: 0;
+      background: rgba(15, 23, 42, 0.65); backdrop-filter: blur(2px);
+      display: flex; align-items: flex-end; justify-content: center;
+    }
+    .modal-sheet {
+      width: 100%; max-width: 500px;
+      background: #fff; border-radius: 22px 22px 0 0;
+      padding: 20px 18px calc(24px + env(safe-area-inset-bottom, 0px));
+      display: flex; flex-direction: column; gap: 12px;
+      box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.25);
+    }
+    .modal-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+    .modal-title { font-size: 17px; font-weight: 800; color: var(--ink); }
+    .modal-sub { font-size: 12px; font-weight: 700; color: var(--sub); margin-top: 2px; }
+    .modal-close { padding: 6px 10px; border-radius: 8px; background: var(--fill); font-size: 13px; font-weight: 800; color: var(--sub); }
+    .modal-mult-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 8px 12px; background: #fef3c7; border-radius: 10px; font-size: 12px; font-weight: 700; color: #92400e;
+    }
+    .modal-mult-row select {
+      padding: 4px 8px; border-radius: 6px; border: 1px solid #f59e0b; background: #fff; font-weight: 800;
+    }
+    .modal-actions { display: flex; gap: 8px; margin-top: 4px; }
+    .btn-del {
+      padding: 0 16px; height: 48px; border-radius: 12px;
+      background: #fee2e2; color: var(--danger); font-size: 14px; font-weight: 800;
+    }
+    .btn-update {
+      flex: 1; height: 48px; border-radius: 12px;
+      background: var(--ink); color: #fff; font-size: 15px; font-weight: 800;
+    }
 
     .toast {
       position: fixed; z-index: 100; left: 50%; transform: translateX(-50%);
@@ -276,29 +293,24 @@
 <main class="app" id="app">
   <header class="console-header">
     <div class="brand">
-      <svg class="px" width="20" height="20" viewBox="0 0 16 16">
+      <svg class="px" width="18" height="18" viewBox="0 0 16 16">
         <path fill="#38bdf8" d="M2 2h9v5H2z"/>
         <path fill="#0284c7" d="M3 3h7v3H3z"/>
         <path fill="#ef4444" d="M11 3h4v2h-4z"/>
         <path fill="#94a3b8" d="M5 7h4v6H5z"/>
         <path fill="#475569" d="M4 13h6v2H4z"/>
       </svg>
-      <span>재고실사 스캐너</span>
+      <span>재고실사</span>
+      <span class="date-badge" id="todayBadge">오늘</span>
     </div>
     <div class="header-actions">
       <button type="button" class="h-btn" id="workerBtn">
-        <svg class="px" width="14" height="14" viewBox="0 0 16 16">
-          <path fill="#fbbf24" d="M4 2h8v3H3V3h1z"/>
-          <path fill="#fde68a" d="M5 5h6v4H5z"/>
-          <path fill="#60a5fa" d="M3 10h10v5H3z"/>
-        </svg>
         <span id="workerText">작업자 입력</span>
       </button>
-      <button type="button" class="h-btn" id="syncBtn">🔄 동기화</button>
+      <button type="button" class="h-btn" id="syncBtn">🔄</button>
     </div>
   </header>
 
-  <!-- 카메라 창 (보이는 화면 100% 그대로 초고속 스캔 · 탭하면 조명 켜짐/꺼짐) -->
   <section class="cam-card" id="cam">
     <video id="camVideo" playsinline muted autoplay></video>
     <div id="fallbackReader" hidden></div>
@@ -317,7 +329,6 @@
     </button>
   </section>
 
-  <!-- 입력 작업 카드 -->
   <section class="work-card">
     <div class="search-wrap">
       <div class="search-box">
@@ -340,15 +351,9 @@
       <p class="item-name" id="itemName">카메라 창 안에 바코드가 들어오게 비추세요</p>
     </div>
 
-    <!-- 왼쪽: 잔량 / 오른쪽: 파렛트 -->
     <div class="counts-grid">
       <label class="slot" id="looseField">
         <div class="slot-head" id="looseHead">
-          <svg class="px" width="16" height="16" viewBox="0 0 16 16">
-            <path fill="#38bdf8" d="M4 2h8v3H4zM3 5h10v8H3zM4 13h8v1H4z"/>
-            <path fill="#0284c7" d="M6 3h4v1H6z"/>
-            <path fill="#e0f2fe" d="M5 6h6v6H5z"/>
-          </svg>
           <span id="looseLabel">잔량 (낱개)</span>
         </div>
         <input id="loose" type="text" inputmode="decimal" placeholder="0" autocomplete="off" disabled>
@@ -356,11 +361,6 @@
 
       <label class="slot" id="palletField">
         <div class="slot-head">
-          <svg class="px" width="16" height="16" viewBox="0 0 16 16">
-            <path fill="#f59e0b" d="M3 2h4v4H3zM9 2h4v4H9zM3 7h10v4H3z"/>
-            <path fill="#d97706" d="M4 3h2v2H4zM10 3h2v2h-2z"/>
-            <path fill="#78350f" d="M1 12h14v2H1zM2 14h3v1H2zM7 14h2v1H7zM11 14h3v1h-3z"/>
-          </svg>
           <span>파렛트 수</span>
         </div>
         <input id="pallets" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="0" autocomplete="off" disabled>
@@ -368,10 +368,7 @@
     </div>
 
     <div class="note-slot">
-      <svg class="px" width="15" height="15" viewBox="0 0 16 16">
-        <path fill="#f59e0b" d="M10 2h4v4h-4zM6 6h4v4H6zM2 10h4v4H2z"/>
-      </svg>
-      <input id="note" type="text" placeholder="특이사항 메모 (파손, LOT, 위치 등 — PC에서 수정 가능)" autocomplete="off" disabled>
+      <input id="note" type="text" placeholder="특이사항 메모 (파손, LOT, 위치 등)" autocomplete="off" disabled>
     </div>
 
     <button type="button" class="save-btn solo" id="save" disabled>
@@ -380,12 +377,12 @@
     </button>
   </section>
 
-  <!-- 하단: 작업자별 스캔 이력 & 품목별 통합집계 -->
+  <!-- 하단: 오늘 스캔이력 (터치하면 즉시 수정/삭제) & 오늘 실사집계 -->
   <section class="log-card">
     <div class="log-header">
       <div class="tab-group">
-        <button type="button" class="tab-btn active" id="tabLog" onclick="setViewMode('log')">내 시트 스캔이력</button>
-        <button type="button" class="tab-btn" id="tabSum" onclick="setViewMode('summary')">전체 실사집계</button>
+        <button type="button" class="tab-btn active" id="tabLog" onclick="setViewMode('log')">오늘 스캔이력 (터치 수정)</button>
+        <button type="button" class="tab-btn" id="tabSum" onclick="setViewMode('summary')">오늘 실사집계</button>
       </div>
       <span class="meta-tag" id="recentMeta"></span>
     </div>
@@ -393,12 +390,57 @@
   </section>
 </main>
 
+<!-- ★ 완료된 스캔 이력 수정/삭제 모달 팝업 -->
+<div class="modal-backdrop" id="editModal" hidden>
+  <div class="modal-sheet">
+    <div class="modal-top">
+      <div>
+        <div class="modal-title" id="editTitle">자재명</div>
+        <div class="modal-sub" id="editSub">품번 · 스캔시간</div>
+      </div>
+      <button type="button" class="modal-close" onclick="closeEditModal()">닫기</button>
+    </div>
+
+    <div class="modal-mult-row">
+      <span>잔량 계산 배수 (예외 시 변경 가능)</span>
+      <select id="editMult">
+        <option value="1">1배수 (낱개 1롤)</option>
+        <option value="2">2배수 (2롤 묶음)</option>
+        <option value="3">3배수 (3롤 묶음)</option>
+        <option value="4">4배수 (4롤 묶음)</option>
+        <option value="5">5배수 (5롤 묶음)</option>
+        <option value="6">6배수 (6롤 묶음)</option>
+      </select>
+    </div>
+
+    <div class="counts-grid">
+      <label class="slot">
+        <div class="slot-head"><span>잔량 수정</span></div>
+        <input id="editLoose" type="text" inputmode="decimal" placeholder="0">
+      </label>
+      <label class="slot">
+        <div class="slot-head"><span>파렛트 수정</span></div>
+        <input id="editPallets" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="0">
+      </label>
+    </div>
+
+    <div class="note-slot">
+      <input id="editNote" type="text" placeholder="특이사항 메모 수정">
+    </div>
+
+    <div class="modal-actions">
+      <button type="button" class="btn-del" id="btnDelRecord">삭제</button>
+      <button type="button" class="btn-update" id="btnSaveEdit">수정 저장</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast" hidden></div>
 
 <script>
 const API_URL = 'https://script.google.com/macros/s/AKfycbyMrPtlVmS9tTHUDS5WrqNQp9LHZD1LKlKzhsRSkfuJNMENuswVDcSgni2GmwMXGkYz/exec';
 const API_KEY = 'dbslcka1!';
-const SLEEP_TIMEOUT_MS = 40000; // 40초간 미사용 시에만 카메라 하드웨어 전원 차단
+const SLEEP_TIMEOUT_MS = 40000;
 
 const DEFAULT_CODE_MULTS = {
   '41370026': 2, '42270010': 3, '41370067': 4,
@@ -413,18 +455,19 @@ const DEFAULT_KEYWORD_RULES = [
 const $ = (id) => document.getElementById(id);
 let items = [];
 let itemsByLen = [];
-let excluded = [];
 let current = null;
 let recent = [];
 let viewMode = 'log';
+let todayStr = new Date().toISOString().slice(0, 10);
 let currentWorker = localStorage.getItem('inv_worker') || '';
 let suggestions = [];
+let editingRecord = null;
 let lastBackPress = 0;
 
-/* ════════ 작업자 설정 ════════ */
 function updateWorkerUI() {
+  $('todayBadge').textContent = todayStr;
   if (currentWorker) {
-    $('workerText').textContent = currentWorker + ' (실사_' + currentWorker + ')';
+    $('workerText').textContent = currentWorker;
     $('workerBtn').classList.add('worker-active');
   } else {
     $('workerText').textContent = '작업자 입력';
@@ -432,7 +475,7 @@ function updateWorkerUI() {
   }
 }
 $('workerBtn').addEventListener('click', () => {
-  const name = prompt('작업자 이름을 입력해주세요.\n구글 시트에 [실사_이름] 탭이 자동 생성되어 기록됩니다.', currentWorker);
+  const name = prompt('작업자 이름을 입력해주세요.\n구글 시트에 [' + todayStr + '_이름] 탭이 자동 생성됩니다.', currentWorker);
   if (name !== null) {
     currentWorker = name.trim();
     localStorage.setItem('inv_worker', currentWorker);
@@ -455,9 +498,7 @@ function getLooseMult(item) {
   return 1;
 }
 
-/* ════════ 1:1 보이는 영역 직결 하드웨어 바코드 엔진 ════════
-   - 갤럭시 크롬: 내장 하드웨어 가속 BarcodeDetector로 화면에 보이는 영역(cropCanvas)을 초당 16회 직접 스캔
-   - 수량 입력 중에는 카메라 전원을 끄지 않고 일시정지(pause)만 하여 저장 직후 0.01초 만에 다음 스캔 재개 */
+/* ════════ 1:1 보이는 영역 직결 바코드 스캐너 ════════ */
 let mediaStream = null;
 let nativeDetector = null;
 let fallbackScanner = null;
@@ -485,7 +526,6 @@ function getVideoTrack() {
   return null;
 }
 
-// 화면 터치 시 조명(손전등) 즉시 토글
 $('cam').addEventListener('click', async (e) => {
   if (e.target.closest('#camHold') || e.target.closest('#camSleep')) return;
   if (!camActive || scanPaused) return;
@@ -520,16 +560,13 @@ async function initNativeDetector() {
     if (!wanted.length) return false;
     nativeDetector = new window.BarcodeDetector({ formats: wanted });
     return true;
-  } catch (e) {
-    return false;
-  }
+  } catch (e) { return false; }
 }
 
 async function startCamera() {
   $('camSleep').hidden = true;
   $('camHold').hidden = true;
 
-  // 이미 카메라가 켜져 있고 일시정지(수량 입력 직후) 상태라면 0.01초 만에 즉시 재개!
   if (camActive) {
     scanPaused = false;
     if (!usingFallback) {
@@ -549,17 +586,12 @@ async function startCamera() {
     try {
       mediaStream = await navigator.mediaDevices.getUserMedia({
         audio: false,
-        video: {
-          facingMode: { ideal: 'environment' },
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
-        }
+        video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }
       });
       const video = $('camVideo');
       video.srcObject = mediaStream;
       await video.play();
 
-      // 연속 자동초점 및 1.25배 광학 줌(근접 초점 흐림 방지) 세팅
       const track = getVideoTrack();
       if (track && track.getCapabilities) {
         try {
@@ -580,28 +612,22 @@ async function startCamera() {
       return;
     } catch (e) {}
   }
-
-  // 보조 스캐너 (iOS 사파리 등 BarcodeDetector 미지원 환경용)
   startFallbackScanner();
 }
 
 function startNativeScanLoop() {
   clearInterval(scanTimer);
   let busy = false;
-
   scanTimer = setInterval(async () => {
     if (!camActive || scanPaused || busy || !nativeDetector) return;
     const video = $('camVideo');
     const camBox = $('cam');
-    const vw = video.videoWidth;
-    const vh = video.videoHeight;
-    const cw = camBox.clientWidth;
-    const ch = camBox.clientHeight;
+    const vw = video.videoWidth, vh = video.videoHeight;
+    const cw = camBox.clientWidth, ch = camBox.clientHeight;
     if (!vw || !vh || !cw || !ch) return;
 
     busy = true;
     try {
-      // ★ 화면에 실제로 보이는 영역(object-fit: cover 기준)과 100% 동일한 좌표만 잘라내어 스캔!
       const scale = Math.max(cw / vw, ch / vh);
       const visW = Math.floor(cw / scale);
       const visH = Math.floor(ch / scale);
@@ -617,10 +643,7 @@ function startNativeScanLoop() {
         const rawValue = String(barcodes[0].rawValue || '').trim();
         if (rawValue) onDecode(rawValue);
       }
-    } catch (e) {
-    } finally {
-      busy = false;
-    }
+    } catch (e) {} finally { busy = false; }
   }, 60);
 }
 
@@ -637,12 +660,7 @@ async function startFallbackScanner() {
     });
   }
   try {
-    await fallbackScanner.start(
-      { facingMode: 'environment' },
-      { fps: 15, disableFlip: true },
-      onDecode,
-      () => {}
-    );
+    await fallbackScanner.start({ facingMode: 'environment' }, { fps: 15, disableFlip: true }, onDecode, () => {});
     camActive = true;
     scanPaused = false;
     $('camText').textContent = '바코드에 갖다 대면 바로 찍힙니다';
@@ -653,7 +671,6 @@ async function startFallbackScanner() {
   }
 }
 
-// 수량 입력 중에는 카메라 전원을 끄지 않고 일시정지만 (저장 직후 0.01초 즉시 재개)
 function pauseCameraForInput() {
   scanPaused = true;
   clearTimeout(sleepTimer);
@@ -664,14 +681,12 @@ function pauseCameraForInput() {
   }
 }
 
-// 40초 이상 사용하지 않을 때만 카메라 하드웨어 완전 종료 (배터리 보호)
 async function stopCameraCompletely() {
   clearTimeout(sleepTimer);
   clearInterval(scanTimer);
   torchOn = false;
   $('camLed').classList.remove('torch');
   $('camSubHint').textContent = '화면 탭: 🔦조명';
-
   if (mediaStream) {
     mediaStream.getTracks().forEach((t) => t.stop());
     mediaStream = null;
@@ -793,7 +808,7 @@ function updateCalc() {
   if (p !== null && p > 0) parts.push(current.unit + '×' + p);
   const screen = parts.length ? parts.join(' + ') : '메모만 저장';
 
-  const sheetTag = '실사_' + (currentWorker || '미지정');
+  const sheetTag = todayStr + '_' + (currentWorker || '미지정');
   btn.disabled = false; btn.classList.remove('solo');
   $('calcText').textContent = '[' + sheetTag + '] ' + screen;
   $('saveLabel').textContent = fmt(total) + '개 저장 ⏎';
@@ -803,7 +818,7 @@ function updateCalc() {
 function save() {
   if (!current) return;
   if (!currentWorker) {
-    const w = prompt('처음 스캔 시 작업자 이름을 입력해주세요.\n(구글 시트에 [실사_이름] 탭으로 자동 분류됩니다)');
+    const w = prompt('처음 스캔 시 작업자 이름을 입력해주세요.\n(구글 시트에 [' + todayStr + '_이름] 탭이 생성됩니다)');
     if (w && w.trim()) {
       currentWorker = w.trim();
       localStorage.setItem('inv_worker', currentWorker);
@@ -819,6 +834,8 @@ function save() {
     code: current.code,
     name: current.name,
     vendor: current.vendor || '',
+    unit: current.unit,
+    looseMult: current.looseMult || 1,
     pallets: c.pallets === null ? '' : c.pallets,
     loose: c.loose === null ? '' : c.loose,
     note: c.note || '',
@@ -833,6 +850,110 @@ function save() {
   cancelPick();
   send(req);
 }
+
+/* ════════ 스캔 이력 수정 및 삭제 모달 로직 ════════ */
+function openEditModal(rec) {
+  if (!rec || rec.state === 'pending') return toast('아직 저장 중입니다. 잠시 후 터치해주세요.');
+  if (!rec.sheetName || !rec.row) return toast('동기화(🔄) 후 수정할 수 있습니다.');
+
+  editingRecord = rec;
+  pauseCameraForInput();
+  $('editTitle').textContent = rec.name || rec.code;
+  $('editSub').textContent = rec.code + ' · ' + rec.time + ' (' + rec.sheetName + ' ' + rec.row + '행)';
+  $('editLoose').value = rec.loose !== '' && rec.loose != null ? rec.loose : '';
+  $('editPallets').value = rec.pallets !== '' && rec.pallets != null ? rec.pallets : '';
+  $('editNote').value = rec.note || '';
+
+  const multVal = String(rec.looseMult || 1);
+  if ([...$('editMult').options].some((o) => o.value === multVal)) {
+    $('editMult').value = multVal;
+  } else {
+    $('editMult').value = '1';
+  }
+  updateEditPreview();
+  $('editModal').hidden = false;
+}
+
+function closeEditModal() {
+  editingRecord = null;
+  $('editModal').hidden = true;
+  if (!current) startCamera();
+}
+
+function updateEditPreview() {
+  if (!editingRecord) return;
+  const lS = $('editLoose').value.trim().replace(',', '.');
+  const pS = $('editPallets').value.trim();
+  const l = lS === '' ? 0 : (Number(lS) || 0);
+  const p = pS === '' ? 0 : (Number(pS) || 0);
+  const mult = Number($('editMult').value) || 1;
+  const unit = Number(editingRecord.unit) || 0;
+  const total = round(l * mult + p * unit);
+  $('btnSaveEdit').textContent = '수정 저장 (총 ' + fmt(total) + '개)';
+}
+
+['editLoose', 'editPallets', 'editMult'].forEach((id) => {
+  $(id).addEventListener('input', updateEditPreview);
+  $(id).addEventListener('change', updateEditPreview);
+});
+
+$('btnSaveEdit').addEventListener('click', async () => {
+  if (!editingRecord) return;
+  const target = editingRecord;
+  const btn = $('btnSaveEdit');
+  btn.disabled = true;
+  btn.textContent = '시트 수정 중...';
+
+  try {
+    const data = await call('POST', {
+      action: 'edit',
+      sheetName: target.sheetName,
+      row: target.row,
+      code: target.code,
+      unit: target.unit,
+      looseMult: $('editMult').value,
+      loose: $('editLoose').value.trim(),
+      pallets: $('editPallets').value.trim(),
+      note: $('editNote').value.trim()
+    });
+    const idx = recent.indexOf(target);
+    if (idx > -1) recent[idx] = Object.assign({ state: 'done' }, data.record);
+    renderRecent();
+    toast('수정 완료! 실사집계 시트도 자동 반영되었습니다.');
+    closeEditModal();
+  } catch (e) {
+    toast('수정 실패: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    updateEditPreview();
+  }
+});
+
+$('btnDelRecord').addEventListener('click', async () => {
+  if (!editingRecord) return;
+  if (!confirm('이 스캔 기록을 삭제할까요?\n구글 시트에서도 삭제되며 실사집계가 자동 재계산됩니다.')) return;
+
+  const target = editingRecord;
+  const btn = $('btnDelRecord');
+  btn.disabled = true;
+  try {
+    await call('POST', {
+      action: 'delete',
+      sheetName: target.sheetName,
+      row: target.row,
+      code: target.code
+    });
+    const idx = recent.indexOf(target);
+    if (idx > -1) recent.splice(idx, 1);
+    renderRecent();
+    toast('삭제 완료되었습니다.');
+    closeEditModal();
+  } catch (e) {
+    toast('삭제 실패: ' + e.message);
+  } finally {
+    btn.disabled = false;
+  }
+});
 
 /* ════════ 서버 통신 ════════ */
 async function call(method, payload) {
@@ -849,8 +970,9 @@ async function boot() {
   $('itemCode').textContent = '구글 시트 동기화 중...';
   try {
     const data = await call('GET', { action: 'boot' });
+    if (data.date) todayStr = data.date;
+    updateWorkerUI();
     items = (data.items || []).map((it) => Object.assign({}, it, { looseMult: getLooseMult(it) }));
-    excluded = data.excluded || [];
     itemsByLen = items.slice().sort((a, b) => b.code.length - a.code.length);
     recent = (data.recent || []).map((r) => Object.assign({ state: 'done' }, r));
     if (!current) $('itemCode').textContent = '관리 자재 ' + items.length + '개 로드됨';
@@ -868,7 +990,7 @@ async function send(req) {
     if (idx > -1) recent[idx] = Object.assign({ state: 'done' }, data.record);
   } catch (e) {
     req.state = 'failed';
-    toast('저장 실패: 내역을 터치하면 다시 전송합니다.');
+    toast('저장 실패: 동기화 후 다시 시도해주세요.');
   }
   renderRecent();
 }
@@ -888,20 +1010,24 @@ function renderRecent() {
     : recent;
 
   if (viewMode === 'log') {
-    $('recentMeta').textContent = (currentWorker ? '실사_' + currentWorker : '전체') + ' · ' + myLogs.length + '건';
+    $('recentMeta').textContent = todayStr + ' · ' + myLogs.length + '건';
     if (!myLogs.length) {
-      list.innerHTML = '<li class="empty">아직 스캔한 내역이 없습니다</li>';
+      list.innerHTML = '<li class="empty">오늘(' + todayStr + ') 스캔한 내역이 없습니다</li>';
       return;
     }
     list.innerHTML = myLogs.map((r, i) => {
       const tags = [r.code, r.vendor, r.worker ? '👤' + r.worker : '', r.formula].filter(Boolean).join(' · ');
       const noteHtml = r.note ? '<p class="row-note">📌 ' + esc(r.note) + '</p>' : '';
-      return '<li class="row ' + (r.state || 'done') + '" data-i="' + i + '">' +
+      return '<li class="row ' + (r.state || 'done') + '" data-log-idx="' + i + '">' +
                '<span class="time-chip">' + esc(r.time || '--:--') + '</span>' +
                '<div class="row-main"><p class="row-name">' + esc(r.name || r.code) + '</p><p class="row-sub">' + esc(tags) + '</p>' + noteHtml + '</div>' +
-               '<div class="row-qty"><b>' + fmt(r.qty) + '</b></div>' +
+               '<div class="row-qty"><b>' + fmt(r.qty) + '</b><span>수정 ✎</span></div>' +
              '</li>';
     }).join('');
+
+    list.querySelectorAll('[data-log-idx]').forEach((el) => {
+      el.addEventListener('click', () => openEditModal(myLogs[+el.dataset.logIdx]));
+    });
     return;
   }
 
@@ -921,9 +1047,9 @@ function renderRecent() {
     if (r.note) g.notes.push(w + ': ' + r.note);
   });
 
-  $('recentMeta').textContent = '총 ' + order.length + '종 집계됨';
+  $('recentMeta').textContent = todayStr + ' · 총 ' + order.length + '종';
   if (!order.length) {
-    list.innerHTML = '<li class="empty">집계된 품목이 없습니다</li>';
+    list.innerHTML = '<li class="empty">오늘(' + todayStr + ') 집계된 품목이 없습니다</li>';
     return;
   }
   list.innerHTML = order.map((c) => {
@@ -932,7 +1058,7 @@ function renderRecent() {
     const noteHtml = g.notes.length ? '<p class="row-note">📌 ' + esc(g.notes.join(' | ')) + '</p>' : '';
     return '<li class="row done">' +
              '<div class="row-main"><p class="row-name">' + esc(g.name) + '</p><p class="row-sub">' + esc(g.code) + (g.vendor ? ' · ' + esc(g.vendor) : '') + ' · 👤 ' + esc(workerStr) + '</p>' + noteHtml + '</div>' +
-             '<div class="row-qty"><b>총 ' + fmt(g.total) + '</b><span>' + g.count + '회 스캔</span></div>' +
+             '<div class="row-qty"><b>총 ' + fmt(g.total) + '</b><span style="color:var(--sub)">' + g.count + '회 스캔</span></div>' +
            '</li>';
   }).join('');
 }
@@ -979,13 +1105,12 @@ $('pallets').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.pre
 $('note').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); save(); } });
 $('save').addEventListener('click', save);
 $('camHold').addEventListener('click', cancelPick);
-$('syncBtn').addEventListener('click', () => { toast('구글 시트 데이터를 새로 불러옵니다.'); boot(); });
+$('syncBtn').addEventListener('click', () => { toast('오늘(' + todayStr + ') 시트 데이터를 새로 불러옵니다.'); boot(); });
 
-// 앱 화면을 내리거나 다른 앱으로 전환 시 즉시 카메라 전원 차단 (배터리 보호)
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden') {
     stopCameraCompletely();
-  } else if (document.visibilityState === 'visible' && !current) {
+  } else if (document.visibilityState === 'visible' && !current && $('editModal').hidden) {
     startCamera();
   }
 });
@@ -994,6 +1119,7 @@ function initBackGuard() {
   try {
     history.pushState({ g: 1 }, '', location.href);
     window.addEventListener('popstate', () => {
+      if (!$('editModal').hidden) { closeEditModal(); history.pushState({ g: 1 }, '', location.href); return; }
       if (!$('suggest').hidden) { $('suggest').hidden = true; history.pushState({ g: 1 }, '', location.href); return; }
       if (current) { cancelPick(); history.pushState({ g: 1 }, '', location.href); return; }
       if (Date.now() - lastBackPress > 2000) {
