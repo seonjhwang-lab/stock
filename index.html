@@ -37,7 +37,7 @@
       overflow-x: hidden; -webkit-font-smoothing: antialiased;
     }
     button, input, select { font: inherit; color: inherit; }
-    button { cursor: pointer; border: 0; background: none; }
+    button { cursor: pointer; border: 0; background: none; touch-action: manipulation; }
 
     .app {
       min-height: 100%; display: flex; flex-direction: column;
@@ -222,13 +222,13 @@
     .tab-btn.active { background: var(--ink); color: #fff; }
     .meta-tag { font-size: 11px; font-weight: 700; color: var(--sub); }
 
-    .list { list-style: none; padding: 0 14px; max-height: 340px; overflow-y: auto; }
+    .list { list-style: none; padding: 0 14px; max-height: 360px; overflow-y: auto; }
     .row {
       display: flex; align-items: center; gap: 10px;
-      padding: 11px 0; border-bottom: 1px solid var(--card-border);
-      cursor: pointer;
+      padding: 12px 0; border-bottom: 1px solid var(--card-border);
+      cursor: pointer; touch-action: manipulation;
     }
-    .row:active { background: #f8fafc; }
+    .row:active { background: #f1f5f9; }
     .row:last-child { border-bottom: 0; }
     .time-chip {
       font-size: 11px; font-weight: 800; color: var(--accent);
@@ -239,9 +239,13 @@
     .row-name { font-size: 14px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .row-sub { margin-top: 2px; font-size: 12px; font-weight: 600; color: var(--sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .row-note { margin-top: 3px; font-size: 11px; font-weight: 700; color: #d97706; }
-    .row-qty { text-align: right; font-variant-numeric: tabular-nums; }
+    .row-qty { text-align: right; font-variant-numeric: tabular-nums; display: flex; flex-direction: column; align-items: flex-end; gap: 3px; }
     .row-qty b { display: block; font-size: 16px; font-weight: 900; color: var(--ink); }
-    .row-qty span { font-size: 11px; font-weight: 700; color: var(--accent); }
+    .edit-pill {
+      display: inline-block; padding: 3px 8px; border-radius: 6px;
+      background: #eff6ff; border: 1px solid #bfdbfe;
+      font-size: 11px; font-weight: 800; color: var(--accent);
+    }
     .empty { padding: 24px 0; text-align: center; font-size: 13px; font-weight: 600; color: var(--faint); }
 
     /* ── 스캔 이력 수정/삭제 모달 팝업 ── */
@@ -251,7 +255,7 @@
       display: flex; align-items: flex-end; justify-content: center;
     }
     .modal-sheet {
-      width: 100%; max-width: 500px;
+      width: 100%; max-width: 500px; max-height: 90dvh; overflow-y: auto;
       background: #fff; border-radius: 22px 22px 0 0;
       padding: 20px 18px calc(24px + env(safe-area-inset-bottom, 0px));
       display: flex; flex-direction: column; gap: 12px;
@@ -260,13 +264,13 @@
     .modal-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
     .modal-title { font-size: 17px; font-weight: 800; color: var(--ink); }
     .modal-sub { font-size: 12px; font-weight: 700; color: var(--sub); margin-top: 2px; }
-    .modal-close { padding: 6px 10px; border-radius: 8px; background: var(--fill); font-size: 13px; font-weight: 800; color: var(--sub); }
+    .modal-close { padding: 7px 12px; border-radius: 8px; background: var(--fill); font-size: 13px; font-weight: 800; color: var(--sub); }
     .modal-mult-row {
       display: flex; align-items: center; justify-content: space-between;
       padding: 8px 12px; background: #fef3c7; border-radius: 10px; font-size: 12px; font-weight: 700; color: #92400e;
     }
     .modal-mult-row select {
-      padding: 4px 8px; border-radius: 6px; border: 1px solid #f59e0b; background: #fff; font-weight: 800;
+      padding: 5px 8px; border-radius: 6px; border: 1px solid #f59e0b; background: #fff; font-weight: 800;
     }
     .modal-actions { display: flex; gap: 8px; margin-top: 4px; }
     .btn-del {
@@ -377,11 +381,10 @@
     </button>
   </section>
 
-  <!-- 하단: 오늘 스캔이력 (터치하면 즉시 수정/삭제) & 오늘 실사집계 -->
   <section class="log-card">
     <div class="log-header">
       <div class="tab-group">
-        <button type="button" class="tab-btn active" id="tabLog" onclick="setViewMode('log')">오늘 스캔이력 (터치 수정)</button>
+        <button type="button" class="tab-btn active" id="tabLog" onclick="setViewMode('log')">오늘 스캔이력</button>
         <button type="button" class="tab-btn" id="tabSum" onclick="setViewMode('summary')">오늘 실사집계</button>
       </div>
       <span class="meta-tag" id="recentMeta"></span>
@@ -390,7 +393,7 @@
   </section>
 </main>
 
-<!-- ★ 완료된 스캔 이력 수정/삭제 모달 팝업 -->
+<!-- 완료된 스캔 이력 수정/삭제 모달 팝업 -->
 <div class="modal-backdrop" id="editModal" hidden>
   <div class="modal-sheet">
     <div class="modal-top">
@@ -660,7 +663,12 @@ async function startFallbackScanner() {
     });
   }
   try {
-    await fallbackScanner.start({ facingMode: 'environment' }, { fps: 15, disableFlip: true }, onDecode, () => {});
+    await fallbackScanner.start(
+      { facingMode: 'environment' },
+      { fps: 15, disableFlip: true },
+      onDecode,
+      () => {}
+    );
     camActive = true;
     scanPaused = false;
     $('camText').textContent = '바코드에 갖다 대면 바로 찍힙니다';
@@ -853,8 +861,11 @@ function save() {
 
 /* ════════ 스캔 이력 수정 및 삭제 모달 로직 ════════ */
 function openEditModal(rec) {
-  if (!rec || rec.state === 'pending') return toast('아직 저장 중입니다. 잠시 후 터치해주세요.');
-  if (!rec.sheetName || !rec.row) return toast('동기화(🔄) 후 수정할 수 있습니다.');
+  if (!rec) return;
+  if (rec.state === 'pending') return toast('아직 시트에 저장 중입니다. 1초 뒤 다시 눌러주세요.');
+  if (!rec.sheetName || !rec.row) {
+    return toast('Apps Script [새 버전] 배포 후 상단 🔄 버튼을 눌러 동기화해주세요.');
+  }
 
   editingRecord = rec;
   pauseCameraForInput();
@@ -879,6 +890,10 @@ function closeEditModal() {
   $('editModal').hidden = true;
   if (!current) startCamera();
 }
+
+$('editModal').addEventListener('click', (e) => {
+  if (e.target === $('editModal')) closeEditModal();
+});
 
 function updateEditPreview() {
   if (!editingRecord) return;
@@ -995,7 +1010,9 @@ async function send(req) {
   renderRecent();
 }
 
-/* ════════ 하단 탭 렌더링 ════════ */
+/* ════════ 하단 탭 렌더링 & 이벤트 위임 ════════ */
+let currentDisplayedLogs = [];
+
 function setViewMode(mode) {
   viewMode = mode;
   $('tabLog').classList.toggle('active', mode === 'log');
@@ -1003,11 +1020,23 @@ function setViewMode(mode) {
   renderRecent();
 }
 
+$('list').addEventListener('click', (e) => {
+  if (viewMode === 'summary') {
+    toast('개별 수정은 왼쪽 [오늘 스캔이력] 탭에서 항목을 터치하세요.');
+    return;
+  }
+  const rowEl = e.target.closest('[data-log-idx]');
+  if (!rowEl) return;
+  const rec = currentDisplayedLogs[+rowEl.dataset.logIdx];
+  if (rec) openEditModal(rec);
+});
+
 function renderRecent() {
   const list = $('list');
   const myLogs = currentWorker
     ? recent.filter((r) => !r.worker || r.worker === currentWorker)
     : recent;
+  currentDisplayedLogs = myLogs;
 
   if (viewMode === 'log') {
     $('recentMeta').textContent = todayStr + ' · ' + myLogs.length + '건';
@@ -1021,13 +1050,9 @@ function renderRecent() {
       return '<li class="row ' + (r.state || 'done') + '" data-log-idx="' + i + '">' +
                '<span class="time-chip">' + esc(r.time || '--:--') + '</span>' +
                '<div class="row-main"><p class="row-name">' + esc(r.name || r.code) + '</p><p class="row-sub">' + esc(tags) + '</p>' + noteHtml + '</div>' +
-               '<div class="row-qty"><b>' + fmt(r.qty) + '</b><span>수정 ✎</span></div>' +
+               '<div class="row-qty"><b>' + fmt(r.qty) + '</b><button type="button" class="edit-pill">수정</button></div>' +
              '</li>';
     }).join('');
-
-    list.querySelectorAll('[data-log-idx]').forEach((el) => {
-      el.addEventListener('click', () => openEditModal(myLogs[+el.dataset.logIdx]));
-    });
     return;
   }
 
@@ -1058,7 +1083,7 @@ function renderRecent() {
     const noteHtml = g.notes.length ? '<p class="row-note">📌 ' + esc(g.notes.join(' | ')) + '</p>' : '';
     return '<li class="row done">' +
              '<div class="row-main"><p class="row-name">' + esc(g.name) + '</p><p class="row-sub">' + esc(g.code) + (g.vendor ? ' · ' + esc(g.vendor) : '') + ' · 👤 ' + esc(workerStr) + '</p>' + noteHtml + '</div>' +
-             '<div class="row-qty"><b>총 ' + fmt(g.total) + '</b><span style="color:var(--sub)">' + g.count + '회 스캔</span></div>' +
+             '<div class="row-qty"><b>총 ' + fmt(g.total) + '</b><span style="font-size:11px;color:var(--sub)">' + g.count + '회 스캔</span></div>' +
            '</li>';
   }).join('');
 }
